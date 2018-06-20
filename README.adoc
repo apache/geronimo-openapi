@@ -1,0 +1,12 @@
+= Geronimo Microprofile OpenAPI Implementation
+
+== Artifact
+
+[source,xml]
+----
+<parent>
+  <groupId>org.apache.geronimo</groupId>
+  <artifactId>geronimo-openapi</artifactId>
+  <version>${openapi.version}</version>
+</parent>
+----
