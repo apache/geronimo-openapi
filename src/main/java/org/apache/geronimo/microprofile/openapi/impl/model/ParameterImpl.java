@@ -20,7 +20,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTypeAdapter;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.examples.Example;
 import org.eclipse.microprofile.openapi.models.media.Content;
@@ -210,6 +213,7 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.InSerializer.class)
     public In getIn() {
         return _in;
     }
@@ -242,11 +246,13 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
+    @JsonbProperty("$ref")
     public String getRef() {
         return _ref;
     }
 
     @Override
+    @JsonbProperty("$ref")
     public void setRef(final String _ref) {
         this._ref = _ref;
     }

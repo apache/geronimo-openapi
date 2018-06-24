@@ -20,7 +20,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTypeDeserializer;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
 import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.callbacks.Callback;
@@ -38,22 +40,31 @@ public class ComponentsImpl implements Components {
 
     private Extensible _extensible = new ExtensibleImpl();
 
+    @JsonbTypeDeserializer(Deserializers.MapCallbacksDeserializer.class)
     private Map<String, Callback> _callbacks;
 
+    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     private Map<String, Example> _examples;
 
+    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     private Map<String, Header> _headers;
 
+    @JsonbTypeDeserializer(Deserializers.MapLinksDeserializer.class)
     private Map<String, Link> _links;
 
+    @JsonbTypeDeserializer(Deserializers.MapParametersDeserializer.class)
     private Map<String, Parameter> _parameters;
 
+    @JsonbTypeDeserializer(Deserializers.MapRequestBodiesDeserializer.class)
     private Map<String, RequestBody> _requestBodies;
 
+    @JsonbTypeDeserializer(Deserializers.MapAPIResponsesDeserializer.class)
     private Map<String, APIResponse> _responses;
 
+    @JsonbTypeDeserializer(Deserializers.MapSchemasDeserializer.class)
     private Map<String, Schema> _schemas;
 
+    @JsonbTypeDeserializer(Deserializers.MapSecuritySchemesDeserializer.class)
     private Map<String, SecurityScheme> _securitySchemes;
 
     @Override

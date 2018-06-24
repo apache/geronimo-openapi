@@ -18,31 +18,31 @@ package org.apache.geronimo.microprofile.openapi.cdi;
 
 import static java.util.Optional.ofNullable;
 
-import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Stream;
 
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.Annotated;
+import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessBean;
-import javax.json.bind.Jsonb;
-import javax.json.bind.JsonbBuilder;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
 
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
-import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
+import org.apache.geronimo.microprofile.openapi.impl.loader.DefaultLoader;
+import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedMethodElement;
+import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedTypeElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
 import org.eclipse.microprofile.openapi.OASFilter;
 import org.eclipse.microprofile.openapi.OASModelReader;
@@ -78,10 +78,10 @@ public class GeronimoOpenAPIExtension implements Extension {
         final OpenAPI api = ofNullable(config.read("mp.openapi.model.reader", null)).map(value -> newInstance(current, value))
                 .map(it -> OASModelReader.class.cast(it).buildModel()).orElseGet(() -> {
                     final BeanManager beanManager = current.getBeanManager();
-                    final OpenAPI impl = loadDefaultApi();
+                    final OpenAPI impl = current.select(DefaultLoader.class).get().loadDefaultApi();
                     processor.processApplication(impl, new ElementImpl(beanManager.createAnnotatedType(application)));
                     beans.map(beanManager::createAnnotatedType).forEach(at -> processor.processClass(impl, new ElementImpl(at),
-                            at.getMethods().stream().map(ElementImpl::new)));
+                            at.getMethods().stream().map(MethodElementImpl::new)));
                     return impl;
                 });
 
@@ -92,23 +92,6 @@ public class GeronimoOpenAPIExtension implements Extension {
                     return api;
                 })
                 .orElse(api);
-    }
-
-    private OpenAPI loadDefaultApi() {
-        // todo: yaml handling + json mapping correctly (interface to impl)
-        return Stream.of("", "/")
-              .map(prefix -> prefix + "openapi.json")
-              .map(it -> Thread.currentThread().getContextClassLoader().getResourceAsStream(it))
-              .filter(Objects::nonNull)
-              .findFirst()
-              .map(r -> {
-                  try (final Jsonb jsonb = JsonbBuilder.create()) {
-                      return jsonb.fromJson(r, OpenAPIImpl.class);
-                  } catch (final Exception e) {
-                      throw new IllegalStateException(e);
-                  }
-              })
-              .orElseGet(OpenAPIImpl::new);
     }
 
     private Object newInstance(final CDI<Object> current, final String value) {
@@ -125,6 +108,46 @@ public class GeronimoOpenAPIExtension implements Extension {
             }
         } catch (final ClassNotFoundException e) {
             throw new IllegalArgumentException("Can't load " + value, e);
+        }
+    }
+
+    private static class MethodElementImpl extends ElementImpl implements AnnotatedMethodElement {
+
+        private final AnnotatedMethod<?> delegate;
+
+        private MethodElementImpl(final AnnotatedMethod<?> delegate) {
+            super(delegate);
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Type getReturnType() {
+            return delegate.getJavaMember().getGenericReturnType();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return delegate.getDeclaringType().getJavaClass();
+        }
+
+        @Override
+        public AnnotatedTypeElement[] getParameters() {
+            return delegate.getParameters().stream().map(p -> new TypeElementImpl(p.getBaseType(), p)).toArray(TypeElementImpl[]::new);
+        }
+    }
+
+    private static class TypeElementImpl extends ElementImpl implements AnnotatedTypeElement {
+
+        private final Type type;
+
+        private TypeElementImpl(final Type type, final Annotated delegate) {
+            super(delegate);
+            this.type = type;
+        }
+
+        @Override
+        public Type getType() {
+            return type;
         }
     }
 

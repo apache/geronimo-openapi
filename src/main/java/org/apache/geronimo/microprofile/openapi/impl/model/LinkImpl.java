@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.links.Link;
@@ -130,11 +131,13 @@ public class LinkImpl implements Link {
     }
 
     @Override
+    @JsonbProperty("$ref")
     public String getRef() {
         return _ref;
     }
 
     @Override
+    @JsonbProperty("$ref")
     public void setRef(final String _ref) {
         this._ref = _ref;
     }

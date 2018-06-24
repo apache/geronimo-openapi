@@ -14,33 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geronimo.microprofile.openapi.impl.model;
+package org.apache.geronimo.microprofile.openapi.impl.processor;
 
-import javax.enterprise.inject.Vetoed;
-import javax.json.bind.annotation.JsonbProperty;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Type;
 
-import org.eclipse.microprofile.openapi.models.Reference;
+public interface AnnotatedTypeElement extends AnnotatedElement {
 
-@Vetoed
-public class ReferenceImpl implements Reference {
-
-    private String _ref;
-
-    @Override
-    @JsonbProperty("$ref")
-    public String getRef() {
-        return _ref;
-    }
-
-    @Override
-    @JsonbProperty("$ref")
-    public void setRef(final String _ref) {
-        this._ref = _ref;
-    }
-
-    @Override
-    public Reference ref(final String _ref) {
-        setRef(_ref);
-        return this;
-    }
+    Type getType();
 }

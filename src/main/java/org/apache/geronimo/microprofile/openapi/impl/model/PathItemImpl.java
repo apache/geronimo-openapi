@@ -41,28 +41,20 @@ public class PathItemImpl implements PathItem {
 
     private String _description;
 
-    @JsonbProperty("delete")
     private Operation _dELETE;
 
-    @JsonbProperty("get")
     private Operation _gET;
 
-    @JsonbProperty("head")
     private Operation _hEAD;
 
-    @JsonbProperty("options")
     private Operation _oPTIONS;
 
-    @JsonbProperty("patch")
     private Operation _pATCH;
 
-    @JsonbProperty("post")
     private Operation _pOST;
 
-    @JsonbProperty("put")
     private Operation _pUT;
 
-    @JsonbProperty("trace")
     private Operation _tRACE;
 
     private List<Parameter> _parameters;
@@ -89,11 +81,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("delete")
     public Operation getDELETE() {
         return _dELETE;
     }
 
     @Override
+    @JsonbProperty("delete")
     public void setDELETE(final Operation _dELETE) {
         this._dELETE = _dELETE;
     }
@@ -120,11 +114,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("get")
     public Operation getGET() {
         return _gET;
     }
 
     @Override
+    @JsonbProperty("get")
     public void setGET(final Operation _gET) {
         this._gET = _gET;
     }
@@ -136,11 +132,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("head")
     public Operation getHEAD() {
         return _hEAD;
     }
 
     @Override
+    @JsonbProperty("head")
     public void setHEAD(final Operation _hEAD) {
         this._hEAD = _hEAD;
     }
@@ -152,11 +150,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("options")
     public Operation getOPTIONS() {
         return _oPTIONS;
     }
 
     @Override
+    @JsonbProperty("options")
     public void setOPTIONS(final Operation _oPTIONS) {
         this._oPTIONS = _oPTIONS;
     }
@@ -168,11 +168,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("patch")
     public Operation getPATCH() {
         return _pATCH;
     }
 
     @Override
+    @JsonbProperty("patch")
     public void setPATCH(final Operation _pATCH) {
         this._pATCH = _pATCH;
     }
@@ -184,11 +186,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("post")
     public Operation getPOST() {
         return _pOST;
     }
 
     @Override
+    @JsonbProperty("post")
     public void setPOST(final Operation _pOST) {
         this._pOST = _pOST;
     }
@@ -200,11 +204,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("put")
     public Operation getPUT() {
         return _pUT;
     }
 
     @Override
+    @JsonbProperty("put")
     public void setPUT(final Operation _pUT) {
         this._pUT = _pUT;
     }
@@ -238,11 +244,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("$ref")
     public String getRef() {
         return _ref;
     }
 
     @Override
+    @JsonbProperty("$ref")
     public void setRef(final String _ref) {
         this._ref = _ref;
     }
@@ -292,11 +300,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
+    @JsonbProperty("trace")
     public Operation getTRACE() {
         return _tRACE;
     }
 
     @Override
+    @JsonbProperty("trace")
     public void setTRACE(final Operation _tRACE) {
         this._tRACE = _tRACE;
     }

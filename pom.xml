@@ -44,6 +44,7 @@
     <spec.version>1.0.1</spec.version>
     <arquillian.version>1.1.14.Final</arquillian.version>
     <testng.version>6.9.9</testng.version>
+    <jackson.version>2.9.4</jackson.version>
   </properties>
 
   <dependencies>
@@ -102,11 +103,38 @@
       <version>1.0</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-json_1.1_spec</artifactId>
+      <version>1.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-servlet-api</artifactId>
+      <version>9.0.8</version>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.cxf</groupId>
       <artifactId>cxf-integration-cdi</artifactId>
       <version>3.2.4</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <!-- not that consistent with microprofile so don't enforce it -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <version>${jackson.version}</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
       <scope>provided</scope>
       <optional>true</optional>
     </dependency>

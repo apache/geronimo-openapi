@@ -20,7 +20,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTypeDeserializer;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.examples.Example;
 import org.eclipse.microprofile.openapi.models.media.Encoding;
@@ -32,10 +34,12 @@ public class MediaTypeImpl implements MediaType {
 
     private Extensible _extensible = new ExtensibleImpl();
 
+    @JsonbTypeDeserializer(Deserializers.MapEncodingsDeserializer.class)
     private Map<String, Encoding> _encoding;
 
     private Object _example;
 
+    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     private Map<String, Example> _examples;
 
     private Schema _schema;

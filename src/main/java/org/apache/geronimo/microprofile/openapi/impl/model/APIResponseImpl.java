@@ -20,7 +20,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTypeDeserializer;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.headers.Header;
 import org.eclipse.microprofile.openapi.models.links.Link;
@@ -36,8 +38,10 @@ public class APIResponseImpl implements APIResponse {
 
     private String _description;
 
+    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     private Map<String, Header> _headers;
 
+    @JsonbTypeDeserializer(Deserializers.MapLinksDeserializer.class)
     private Map<String, Link> _links;
 
     private String _ref;

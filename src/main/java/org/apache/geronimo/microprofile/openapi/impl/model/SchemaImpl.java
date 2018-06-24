@@ -22,7 +22,11 @@ import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
+import javax.json.bind.annotation.JsonbTypeAdapter;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.ExternalDocumentation;
 import org.eclipse.microprofile.openapi.models.media.Discriminator;
@@ -127,6 +131,7 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbTransient
     public void setAdditionalProperties(final Boolean additionalProperties) {
         _additionalProperties = additionalProperties;
     }
@@ -627,11 +632,13 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbProperty("$ref")
     public String getRef() {
         return _ref;
     }
 
     @Override
+    @JsonbProperty("$ref")
     public void setRef(final String _ref) {
         this._ref = _ref;
     }
@@ -681,6 +688,7 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.SchemaTypeSerializer.class)
     public SchemaType getType() {
         return _type;
     }
