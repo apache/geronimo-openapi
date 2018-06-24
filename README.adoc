@@ -10,3 +10,10 @@
   <version>${openapi.version}</version>
 </parent>
 ----
+
+== Dependencies
+
+1. JAX-RS+Servlet
+2. CDI (optional if used as a library)
+3. JSONB (for JSON support)
+4. Jackson+YAML extension (for YAML support)

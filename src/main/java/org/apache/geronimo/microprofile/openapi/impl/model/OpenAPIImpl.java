@@ -44,7 +44,7 @@ public class OpenAPIImpl implements OpenAPI {
 
     private Info _info;
 
-    private String _openapi;
+    private String _openapi = "3.0.0";
 
     private Paths _paths;
 
