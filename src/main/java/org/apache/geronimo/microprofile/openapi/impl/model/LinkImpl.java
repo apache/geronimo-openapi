@@ -27,13 +27,21 @@ import org.eclipse.microprofile.openapi.models.servers.Server;
 
 @Vetoed
 public class LinkImpl implements Link {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private String _description;
+
     private String _operationId;
+
     private String _operationRef;
+
     private Map<String, Object> _parameters;
+
     private String _ref;
+
     private Object _requestBody;
+
     private Server _server;
 
     @Override
@@ -42,13 +50,13 @@ public class LinkImpl implements Link {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

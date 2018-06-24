@@ -35,15 +35,25 @@ import org.eclipse.microprofile.openapi.models.security.SecurityScheme;
 
 @Vetoed
 public class ComponentsImpl implements Components {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Map<String, Callback> _callbacks;
+
     private Map<String, Example> _examples;
+
     private Map<String, Header> _headers;
+
     private Map<String, Link> _links;
+
     private Map<String, Parameter> _parameters;
+
     private Map<String, RequestBody> _requestBodies;
+
     private Map<String, APIResponse> _responses;
+
     private Map<String, Schema> _schemas;
+
     private Map<String, SecurityScheme> _securitySchemes;
 
     @Override
@@ -52,13 +62,13 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override
@@ -189,7 +199,8 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addRequestBody(final String key, final RequestBody _requestBodies) {
-        (this._requestBodies = this._requestBodies == null ? new LinkedHashMap<>() : this._requestBodies).put(key, _requestBodies);
+        (this._requestBodies = this._requestBodies == null ? new LinkedHashMap<>() : this._requestBodies).put(key,
+                _requestBodies);
         return this;
     }
 
@@ -255,7 +266,8 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addSecurityScheme(final String key, final SecurityScheme _securitySchemes) {
-        (this._securitySchemes = this._securitySchemes == null ? new LinkedHashMap<>() : this._securitySchemes).put(key, _securitySchemes);
+        (this._securitySchemes = this._securitySchemes == null ? new LinkedHashMap<>() : this._securitySchemes).put(key,
+                _securitySchemes);
         return this;
     }
 }

@@ -27,12 +27,19 @@ import org.eclipse.microprofile.openapi.models.info.License;
 
 @Vetoed
 public class InfoImpl implements Info {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Contact _contact;
+
     private String _description;
+
     private License _license;
+
     private String _termsOfService;
+
     private String _title;
+
     private String _version;
 
     @Override
@@ -41,13 +48,13 @@ public class InfoImpl implements Info {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

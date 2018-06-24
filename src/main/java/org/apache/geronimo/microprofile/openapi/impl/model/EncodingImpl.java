@@ -26,11 +26,17 @@ import org.eclipse.microprofile.openapi.models.media.Encoding;
 
 @Vetoed
 public class EncodingImpl implements Encoding {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Boolean _allowReserved;
+
     private String _contentType;
+
     private Boolean _explode;
+
     private Map<String, Header> _headers;
+
     private Style _style;
 
     @Override
@@ -39,13 +45,13 @@ public class EncodingImpl implements Encoding {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

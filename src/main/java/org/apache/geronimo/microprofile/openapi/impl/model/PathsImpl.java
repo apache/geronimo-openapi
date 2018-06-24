@@ -27,6 +27,7 @@ import org.eclipse.microprofile.openapi.models.Paths;
 
 @Vetoed
 public class PathsImpl extends LinkedHashMap<String, PathItem> implements Paths {
+
     private Extensible _extensible = new ExtensibleImpl();
 
     @Override
@@ -35,13 +36,13 @@ public class PathsImpl extends LinkedHashMap<String, PathItem> implements Paths 
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

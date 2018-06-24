@@ -27,7 +27,9 @@ import org.eclipse.microprofile.openapi.models.callbacks.Callback;
 
 @Vetoed
 public class CallbackImpl extends LinkedHashMap<String, PathItem> implements Callback {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private String _ref;
 
     @Override
@@ -36,13 +38,13 @@ public class CallbackImpl extends LinkedHashMap<String, PathItem> implements Cal
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

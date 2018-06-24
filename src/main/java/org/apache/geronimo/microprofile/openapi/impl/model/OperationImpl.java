@@ -34,18 +34,31 @@ import org.eclipse.microprofile.openapi.models.servers.Server;
 
 @Vetoed
 public class OperationImpl implements Operation {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Map<String, Callback> _callbacks;
+
     private Boolean _deprecated;
+
     private String _description;
+
     private ExternalDocumentation _externalDocs;
+
     private String _operationId;
+
     private List<Parameter> _parameters;
+
     private RequestBody _requestBody;
+
     private APIResponses _responses;
+
     private List<SecurityRequirement> _security;
+
     private List<Server> _servers;
+
     private String _summary;
+
     private List<String> _tags;
 
     @Override
@@ -54,13 +67,13 @@ public class OperationImpl implements Operation {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

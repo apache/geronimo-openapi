@@ -29,11 +29,17 @@ import org.eclipse.microprofile.openapi.models.responses.APIResponse;
 
 @Vetoed
 public class APIResponseImpl implements APIResponse {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Content _content;
+
     private String _description;
+
     private Map<String, Header> _headers;
+
     private Map<String, Link> _links;
+
     private String _ref;
 
     @Override
@@ -42,13 +48,13 @@ public class APIResponseImpl implements APIResponse {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

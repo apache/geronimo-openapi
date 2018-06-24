@@ -25,7 +25,9 @@ import org.eclipse.microprofile.openapi.models.media.Discriminator;
 
 @Vetoed
 public class DiscriminatorImpl implements Discriminator {
+
     private Map<String, String> _mapping;
+
     private String _propertyName;
 
     @Override

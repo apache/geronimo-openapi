@@ -25,11 +25,17 @@ import org.eclipse.microprofile.openapi.models.media.XML;
 
 @Vetoed
 public class XMLImpl implements XML {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Boolean _attribute;
+
     private String _name;
+
     private String _namespace;
+
     private String _prefix;
+
     private Boolean _wrapped;
 
     @Override
@@ -38,13 +44,13 @@ public class XMLImpl implements XML {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

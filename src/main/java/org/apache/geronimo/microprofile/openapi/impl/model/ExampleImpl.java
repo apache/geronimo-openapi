@@ -25,11 +25,17 @@ import org.eclipse.microprofile.openapi.models.examples.Example;
 
 @Vetoed
 public class ExampleImpl implements Example {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private String _description;
+
     private String _externalValue;
+
     private String _ref;
+
     private String _summary;
+
     private Object _value;
 
     @Override
@@ -38,13 +44,13 @@ public class ExampleImpl implements Example {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

@@ -16,7 +16,6 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
-import java.lang.String;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -27,6 +26,7 @@ import org.eclipse.microprofile.openapi.models.security.Scopes;
 
 @Vetoed
 public class ScopesImpl extends LinkedHashMap<String, String> implements Scopes {
+
     private Extensible _extensible = new ExtensibleImpl();
 
     @Override
@@ -35,13 +35,13 @@ public class ScopesImpl extends LinkedHashMap<String, String> implements Scopes 
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

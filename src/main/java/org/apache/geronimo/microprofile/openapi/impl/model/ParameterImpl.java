@@ -29,20 +29,35 @@ import org.eclipse.microprofile.openapi.models.parameters.Parameter;
 
 @Vetoed
 public class ParameterImpl implements Parameter {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Boolean _allowEmptyValue;
+
     private Boolean _allowReserved;
+
     private Content _content;
+
     private Boolean _deprecated;
+
     private String _description;
+
     private Object _example;
+
     private Map<String, Example> _examples;
+
     private Boolean _explode;
+
     private In _in;
+
     private String _name;
+
     private String _ref;
+
     private Boolean _required;
+
     private Schema _schema;
+
     private Style _style;
 
     @Override
@@ -51,13 +66,13 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

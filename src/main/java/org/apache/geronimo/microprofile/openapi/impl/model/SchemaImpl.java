@@ -31,42 +31,79 @@ import org.eclipse.microprofile.openapi.models.media.XML;
 
 @Vetoed
 public class SchemaImpl implements Schema {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Object _additionalProperties;
+
     private List<Schema> _allOf;
+
     private List<Schema> _anyOf;
+
     private Object _defaultValue;
+
     private Boolean _deprecated;
+
     private String _description;
+
     private Discriminator _discriminator;
+
     private List<Object> _enumeration;
+
     private Object _example;
+
     private Boolean _exclusiveMaximum;
+
     private Boolean _exclusiveMinimum;
+
     private ExternalDocumentation _externalDocs;
+
     private String _format;
+
     private Schema _items;
+
     private Integer _maxItems;
+
     private Integer _maxLength;
+
     private Integer _maxProperties;
+
     private java.math.BigDecimal _maximum;
+
     private Integer _minItems;
+
     private Integer _minLength;
+
     private Integer _minProperties;
+
     private java.math.BigDecimal _minimum;
+
     private java.math.BigDecimal _multipleOf;
+
     private Schema _not;
+
     private Boolean _nullable;
+
     private List<Schema> _oneOf;
+
     private String _pattern;
+
     private Map<String, Schema> _properties;
+
     private Boolean _readOnly;
+
     private String _ref;
+
     private List<String> _required;
+
     private String _title;
+
     private SchemaType _type;
+
     private Boolean _uniqueItems;
+
     private Boolean _writeOnly;
+
     private XML _xml;
 
     @Override
@@ -75,13 +112,13 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override
@@ -90,13 +127,13 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
-    public void setAdditionalProperties(final Schema additionalProperties) {
-        this._additionalProperties = additionalProperties;
+    public void setAdditionalProperties(final Boolean additionalProperties) {
+        _additionalProperties = additionalProperties;
     }
 
     @Override
-    public void setAdditionalProperties(final Boolean additionalProperties) {
-        _additionalProperties = additionalProperties;
+    public void setAdditionalProperties(final Schema additionalProperties) {
+        this._additionalProperties = additionalProperties;
     }
 
     @Override

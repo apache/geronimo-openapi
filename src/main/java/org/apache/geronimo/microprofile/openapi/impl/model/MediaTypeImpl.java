@@ -29,10 +29,15 @@ import org.eclipse.microprofile.openapi.models.media.Schema;
 
 @Vetoed
 public class MediaTypeImpl implements MediaType {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Map<String, Encoding> _encoding;
+
     private Object _example;
+
     private Map<String, Example> _examples;
+
     private Schema _schema;
 
     @Override
@@ -41,13 +46,13 @@ public class MediaTypeImpl implements MediaType {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

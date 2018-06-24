@@ -25,8 +25,11 @@ import org.eclipse.microprofile.openapi.models.info.License;
 
 @Vetoed
 public class LicenseImpl implements License {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private String _name;
+
     private String _url;
 
     @Override
@@ -35,13 +38,13 @@ public class LicenseImpl implements License {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

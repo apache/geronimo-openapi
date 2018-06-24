@@ -14,39 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geronimo.microprofile.openapi.impl.model;
-
-import java.util.LinkedHashMap;
+package org.apache.geronimo.microprofile.openapi.config;
 
 import javax.enterprise.inject.Vetoed;
 
-import org.eclipse.microprofile.openapi.models.responses.APIResponse;
-import org.eclipse.microprofile.openapi.models.responses.APIResponses;
-
 @Vetoed
-public class APIResponsesImpl extends LinkedHashMap<String, APIResponse> implements APIResponses {
+class PrefixedConfig implements GeronimoOpenAPIConfig {
 
-    private APIResponse _default;
+    private final GeronimoOpenAPIConfig delegate;
 
-    @Override
-    public APIResponses addApiResponse(final String name, final APIResponse item) {
-        this.put(name, item);
-        return this;
+    PrefixedConfig(final GeronimoOpenAPIConfig geronimoOpenAPIConfig) {
+        this.delegate = geronimoOpenAPIConfig;
     }
 
     @Override
-    public APIResponse getDefault() {
-        return _default;
-    }
-
-    @Override
-    public void setDefaultValue(final APIResponse _defaultValue) {
-        this._default = _defaultValue;
-    }
-
-    @Override
-    public APIResponses defaultValue(final APIResponse _defaultValue) {
-        setDefaultValue(_defaultValue);
-        return this;
+    public String read(final String value, final String def) {
+        if (value.startsWith("mp.")) {
+            return delegate.read(value, def);
+        }
+        return delegate.read("geronimo.openapi." + value, def);
     }
 }

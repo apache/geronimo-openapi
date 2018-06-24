@@ -26,15 +26,25 @@ import org.eclipse.microprofile.openapi.models.security.SecurityScheme;
 
 @Vetoed
 public class SecuritySchemeImpl implements SecurityScheme {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private String _bearerFormat;
+
     private String _description;
+
     private OAuthFlows _flows;
+
     private In _in;
+
     private String _name;
+
     private String _openIdConnectUrl;
+
     private String _ref;
+
     private String _scheme;
+
     private Type _type;
 
     @Override
@@ -43,13 +53,13 @@ public class SecuritySchemeImpl implements SecurityScheme {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

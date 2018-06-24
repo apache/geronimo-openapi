@@ -26,10 +26,15 @@ import org.eclipse.microprofile.openapi.models.parameters.RequestBody;
 
 @Vetoed
 public class RequestBodyImpl implements RequestBody {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Content _content;
+
     private String _description;
+
     private String _ref;
+
     private Boolean _required;
 
     @Override
@@ -38,13 +43,13 @@ public class RequestBodyImpl implements RequestBody {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

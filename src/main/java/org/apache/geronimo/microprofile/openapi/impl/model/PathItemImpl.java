@@ -16,9 +16,7 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +26,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.Operation;
@@ -37,19 +36,41 @@ import org.eclipse.microprofile.openapi.models.servers.Server;
 
 @Vetoed
 public class PathItemImpl implements PathItem {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private String _description;
+
+    @JsonbProperty("delete")
     private Operation _dELETE;
+
+    @JsonbProperty("get")
     private Operation _gET;
+
+    @JsonbProperty("head")
     private Operation _hEAD;
+
+    @JsonbProperty("options")
     private Operation _oPTIONS;
+
+    @JsonbProperty("patch")
     private Operation _pATCH;
+
+    @JsonbProperty("post")
     private Operation _pOST;
+
+    @JsonbProperty("put")
     private Operation _pUT;
+
+    @JsonbProperty("trace")
     private Operation _tRACE;
+
     private List<Parameter> _parameters;
+
     private String _ref;
+
     private List<Server> _servers;
+
     private String _summary;
 
     @Override
@@ -58,13 +79,13 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override
@@ -288,8 +309,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     public List<Operation> readOperations() {
-        return Stream.of(_dELETE, _gET, _hEAD, _oPTIONS, _pATCH, _pOST, _pUT, _tRACE)
-                .filter(Objects::nonNull).collect(toList());
+        return Stream.of(_dELETE, _gET, _hEAD, _oPTIONS, _pATCH, _pOST, _pUT, _tRACE).filter(Objects::nonNull).collect(toList());
     }
 
     @Override

@@ -29,17 +29,29 @@ import org.eclipse.microprofile.openapi.models.media.Schema;
 
 @Vetoed
 public class HeaderImpl implements Header {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Boolean _allowEmptyValue;
+
     private Content _content;
+
     private Boolean _deprecated;
+
     private String _description;
+
     private Object _example;
+
     private Map<String, Example> _examples;
+
     private Boolean _explode;
+
     private String _ref;
+
     private Boolean _required;
+
     private Schema _schema;
+
     private Style _style;
 
     @Override
@@ -48,13 +60,13 @@ public class HeaderImpl implements Header {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override

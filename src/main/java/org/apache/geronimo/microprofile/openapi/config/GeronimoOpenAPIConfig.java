@@ -14,30 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geronimo.microprofile.openapi.impl.model;
+package org.apache.geronimo.microprofile.openapi.config;
 
-import javax.enterprise.inject.Vetoed;
+@FunctionalInterface
+public interface GeronimoOpenAPIConfig {
 
-import org.eclipse.microprofile.openapi.models.Reference;
+    String read(String value, String def);
 
-@Vetoed
-public class ReferenceImpl implements Reference {
-
-    private String _ref;
-
-    @Override
-    public String getRef() {
-        return _ref;
-    }
-
-    @Override
-    public void setRef(final String _ref) {
-        this._ref = _ref;
-    }
-
-    @Override
-    public Reference ref(final String _ref) {
-        setRef(_ref);
-        return this;
+    static GeronimoOpenAPIConfig create() {
+        try {
+            return new PrefixedConfig(new OpenAPIConfigMpConfigImpl());
+        } catch (final NoClassDefFoundError | ExceptionInInitializerError cnfe) {
+            return new PrefixedConfig(new DefaultOpenAPIConfig());
+        }
     }
 }

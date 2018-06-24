@@ -22,7 +22,6 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 
-import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
 import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.ExternalDocumentation;
@@ -36,14 +35,23 @@ import org.eclipse.microprofile.openapi.models.tags.Tag;
 
 @Vetoed
 public class OpenAPIImpl implements OpenAPI {
+
     private Extensible _extensible = new ExtensibleImpl();
+
     private Components _components;
+
     private ExternalDocumentation _externalDocs;
+
     private Info _info;
+
     private String _openapi;
+
     private Paths _paths;
+
     private List<SecurityRequirement> _security;
+
     private List<Server> _servers;
+
     private List<Tag> _tags;
 
     @Override
@@ -52,13 +60,13 @@ public class OpenAPIImpl implements OpenAPI {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
-        _extensible.addExtension(name, value);
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> extensions) {
-        _extensible.setExtensions(extensions);
+    public void addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
     }
 
     @Override
