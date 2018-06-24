@@ -21,15 +21,15 @@ import javax.enterprise.inject.spi.CDI;
 
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.ext.JAXRSServerFactoryCustomizationExtension;
-import org.apache.geronimo.microprofile.openapi.jaxrs.OpenAPIEndpoint;
+import org.apache.geronimo.microprofile.openapi.jaxrs.OpenAPIFilter;
 
 @Vetoed
 public class CxfForceSetup implements JAXRSServerFactoryCustomizationExtension {
     @Override
     public void customize(final JAXRSServerFactoryBean bean) {
-        if (bean.getProviders().stream().anyMatch(OpenAPIEndpoint.class::isInstance)) { // default app, nothing to do
+        if (bean.getProviders().stream().anyMatch(OpenAPIFilter.class::isInstance)) { // default app, nothing to do
             return;
         }
-        bean.setProvider(CDI.current().select(OpenAPIEndpoint.class).get());
+        bean.setProvider(CDI.current().select(OpenAPIFilter.class).get());
     }
 }

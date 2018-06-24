@@ -16,54 +16,20 @@
  */
 package org.apache.geronimo.microprofile.openapi.jaxrs;
 
-import static java.util.Optional.ofNullable;
-import static javax.ws.rs.Priorities.USER;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
-
-import javax.annotation.Priority;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.container.ContainerRequestFilter;
-import javax.ws.rs.container.PreMatching;
-import javax.ws.rs.core.Application;
-import javax.ws.rs.core.Context;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.Provider;
 
-import org.apache.geronimo.microprofile.openapi.cdi.GeronimoOpenAPIExtension;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
 
-// theorically a jaxrs endpoint to benefit from jaxrs tooling and filters - but forbidden by TCK :(
-// @Path("openapi") + @GET
-@Provider
-@PreMatching
-@Priority(USER)
+// just here to ensure an app is deployed (depends the container scanning/config otherwise)
+@Path("openapi")
 @ApplicationScoped
-public class OpenAPIEndpoint implements ContainerRequestFilter {
-
-    @Inject
-    private GeronimoOpenAPIExtension extension;
-
-    private OpenAPI openApi;
-
-    @Override
-    public void filter(final ContainerRequestContext rc) {
-        if (!HttpMethod.GET.equals(rc.getRequest().getMethod())) {
-            return;
-        }
-        final String path = rc.getUriInfo().getPath();
-        if ("openapi".equals(path)) {
-            rc.abortWith(Response.ok(openApi).type(ofNullable(rc.getMediaType()).orElse(APPLICATION_JSON_TYPE)).build());
-        }
-        if ("openapi.json".equals(path)) {
-            rc.abortWith(Response.ok(openApi).type(APPLICATION_JSON_TYPE).build());
-        }
-    }
-
-    @Context
-    public void setApplication(final Application application) {
-        this.openApi = extension.getOrCreateOpenAPI(application);
+public class OpenAPIEndpoint {
+    @GET
+    public OpenAPI get() { // filter should handle it
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
 }

@@ -96,6 +96,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.module.SimpleAbstractTypeResolver;
@@ -174,13 +175,19 @@ public final class Yaml {
             });
 
             final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+            mapper.registerModule(module);
             mapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
                 @Override
                 protected boolean _isIgnorable(final Annotated a) {
                     return super._isIgnorable(a) || a.getAnnotation(JsonbTransient.class) != null;
                 }
             });
-            mapper.registerModule(module);
+            mapper.setPropertyNamingStrategy(new PropertyNamingStrategy.PropertyNamingStrategyBase() {
+                @Override
+                public String translate(final String propertyName) {
+                    return "ref".equals(propertyName) ? "$ref" : propertyName;
+                }
+            });
             return mapper.readValue(stream, OpenAPI.class);
         } catch (final IOException e) {
             throw new IllegalArgumentException(e);
