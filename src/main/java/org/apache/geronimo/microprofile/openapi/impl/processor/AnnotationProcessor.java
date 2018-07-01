@@ -147,8 +147,8 @@ public class AnnotationProcessor {
 
         processServers(api, annotatedType.getAnnotationsByType(Server.class));
 
-        ofNullable(annotatedType.getAnnotation(SecurityScheme.class))
-                .ifPresent(s -> {
+        Stream.of(annotatedType.getAnnotationsByType(SecurityScheme.class))
+                .forEach(s -> {
                     if (api.getComponents() == null) {
                         api.setComponents(new ComponentsImpl());
                     }
@@ -380,12 +380,12 @@ public class AnnotationProcessor {
 
     private org.eclipse.microprofile.openapi.models.security.SecurityScheme updateSecurityScheme(
             final SecurityScheme securityScheme, final SecuritySchemeImpl scheme) {
+        of(securityScheme.apiKeyName()).filter(v -> !v.isEmpty()).ifPresent(scheme::setName);
         of(securityScheme.bearerFormat()).filter(v -> !v.isEmpty()).ifPresent(scheme::bearerFormat);
         of(securityScheme.description()).filter(v -> !v.isEmpty()).ifPresent(scheme::description);
         of(securityScheme.openIdConnectUrl()).filter(v -> !v.isEmpty()).ifPresent(scheme::openIdConnectUrl);
         of(securityScheme.ref()).filter(v -> !v.isEmpty()).ifPresent(scheme::ref);
         of(securityScheme.scheme()).filter(v -> !v.isEmpty()).ifPresent(scheme::scheme);
-        of(securityScheme.securitySchemeName()).filter(v -> !v.isEmpty()).ifPresent(scheme::scheme);
         of(securityScheme.type()).filter(it -> it != SecuritySchemeType.DEFAULT)
                 .map(it -> org.eclipse.microprofile.openapi.models.security.SecurityScheme.Type.valueOf(it.name()))
                 .ifPresent(scheme::type);

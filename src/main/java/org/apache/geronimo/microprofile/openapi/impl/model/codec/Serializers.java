@@ -24,6 +24,7 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.eclipse.microprofile.openapi.models.headers.Header;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter;
+import org.eclipse.microprofile.openapi.models.security.SecurityScheme;
 
 @Vetoed
 public final class Serializers {
@@ -57,6 +58,22 @@ public final class Serializers {
 
         public HeaderStyleSerializer() {
             super(Header.Style.class);
+        }
+    }
+
+    @Vetoed
+    public static class SecuritySchemeTypeSerializer extends EnumSerializer<SecurityScheme.Type> implements JsonbAdapter<SecurityScheme.Type, String> {
+
+        public SecuritySchemeTypeSerializer() {
+            super(SecurityScheme.Type.class);
+        }
+    }
+
+    @Vetoed
+    public static class SecuritySchemeInSerializer extends EnumSerializer<SecurityScheme.In> implements JsonbAdapter<SecurityScheme.In, String> {
+
+        public SecuritySchemeInSerializer() {
+            super(SecurityScheme.In.class);
         }
     }
 

@@ -20,7 +20,9 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTypeAdapter;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.security.OAuthFlows;
 import org.eclipse.microprofile.openapi.models.security.SecurityScheme;
@@ -112,6 +114,7 @@ public class SecuritySchemeImpl implements SecurityScheme {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.SecuritySchemeInSerializer.class)
     public In getIn() {
         return _in;
     }
@@ -194,6 +197,7 @@ public class SecuritySchemeImpl implements SecurityScheme {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.SecuritySchemeTypeSerializer.class)
     public Type getType() {
         return _type;
     }
