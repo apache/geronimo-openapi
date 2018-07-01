@@ -16,9 +16,9 @@
  */
 package org.apache.geronimo.microprofile.openapi.test;
 
-import org.eclipse.microprofile.openapi.tck.PetStoreAppTest;
+import org.eclipse.microprofile.openapi.tck.AirlinesAppTest;
 
 // not a real test or intended to be,
 // just a trick for IDE (this is why it doesn't end with "Test")
 // to ensure it is trivial to debug a TCK
-public class TckRunner extends PetStoreAppTest {}
+public class TckRunner extends AirlinesAppTest {}

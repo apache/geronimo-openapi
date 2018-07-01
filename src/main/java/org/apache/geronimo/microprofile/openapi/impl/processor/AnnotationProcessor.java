@@ -235,6 +235,12 @@ public class AnnotationProcessor {
                 .ifPresent(it -> operation.servers(Stream.of(it).map(this::mapServer).collect(toList())));
         ofNullable(m.getAnnotation(SecurityScheme.class))
                 .ifPresent(s -> api.getComponents().addSecurityScheme(s.ref(), mapSecurityScheme(s)));
+        operation.security(of(Stream.concat(
+                Stream.of(m.getAnnotationsByType(SecurityRequirement.class)),
+                Stream.of(m.getDeclaringClass().getAnnotationsByType(SecurityRequirement.class)))
+                .map(this::mapSecurity).collect(toList()))
+                .filter(s -> !s.isEmpty())
+                .orElse(null));
         of(m.getAnnotationsByType(Tag.class)).filter(s -> s.length > 0)
                 .ifPresent(tags -> operation.tags(Stream.of(tags)
                         .map(it -> of(it.name()).map(tag -> {
