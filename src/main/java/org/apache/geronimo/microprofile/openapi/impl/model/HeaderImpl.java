@@ -20,9 +20,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.examples.Example;
 import org.eclipse.microprofile.openapi.models.headers.Header;
@@ -239,6 +241,7 @@ public class HeaderImpl implements Header {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.HeaderStyleSerializer.class)
     public Style getStyle() {
         return _style;
     }

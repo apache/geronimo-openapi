@@ -21,6 +21,7 @@ import static java.util.Locale.ROOT;
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.adapter.JsonbAdapter;
 
+import org.eclipse.microprofile.openapi.models.headers.Header;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter;
 
@@ -48,6 +49,14 @@ public final class Serializers {
         @Override
         public E adaptFromJson(final String obj) {
             return Enum.valueOf(type, obj.toUpperCase(ROOT));
+        }
+    }
+
+    @Vetoed
+    public static class HeaderStyleSerializer extends EnumSerializer<Header.Style> implements JsonbAdapter<Header.Style, String> {
+
+        public HeaderStyleSerializer() {
+            super(Header.Style.class);
         }
     }
 

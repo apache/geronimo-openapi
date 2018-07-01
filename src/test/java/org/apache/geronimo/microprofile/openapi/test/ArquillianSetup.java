@@ -36,7 +36,7 @@ public class ArquillianSetup implements LoadableExtension {
 
     @Override
     public void register(final ExtensionBuilder extensionBuilder) {
-        extensionBuilder.observer(Setup.class).override(Protocol.class, LocalProtocol.class, ForceWarProtocol.class);
+        extensionBuilder.observer(Setup.class).override(Protocol.class, LocalProtocol.class, CdiProtocol.class);
     }
 
     public static class Setup {
@@ -50,7 +50,7 @@ public class ArquillianSetup implements LoadableExtension {
         }
     }
 
-    public static class ForceWarProtocol extends LocalProtocol {
+    public static class CdiProtocol extends LocalProtocol {
 
         @Override
         public DeploymentPackager getPackager() {

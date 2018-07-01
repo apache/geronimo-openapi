@@ -36,6 +36,7 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessBean;
+import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
 
@@ -63,6 +64,7 @@ public class GeronimoOpenAPIExtension implements Extension {
     }
 
     public OpenAPI getOrCreateOpenAPI(final Application application) {
+        // todo: there are configs for that, todo: handle it
         if (!application.getSingletons().isEmpty() || !application.getClasses().isEmpty()) {
             return openapis.computeIfAbsent(application,
                     app -> createOpenApi(application.getClass(), Stream.concat(endpoints.stream().map(Bean::getBeanClass),
@@ -80,7 +82,13 @@ public class GeronimoOpenAPIExtension implements Extension {
                     final BeanManager beanManager = current.getBeanManager();
                     final OpenAPI impl = current.select(DefaultLoader.class).get().loadDefaultApi();
                     processor.processApplication(impl, new ElementImpl(beanManager.createAnnotatedType(application)));
-                    beans.map(beanManager::createAnnotatedType).forEach(at -> processor.processClass(impl, new ElementImpl(at),
+
+                    // todo: use servlet to get the servlet mapping which is a valid deployment too
+                    final String base = ofNullable(application.getAnnotation(ApplicationPath.class)).map(ApplicationPath::value)
+                            .filter(it -> !"/".equals(it))
+                            .map(it -> it.endsWith("*") ? it.substring(0, it.length() - 1) : it)
+                            .orElse("");
+                    beans.map(beanManager::createAnnotatedType).forEach(at -> processor.processClass(base, impl, new ElementImpl(at),
                             at.getMethods().stream().map(MethodElementImpl::new)));
                     return impl;
                 });
