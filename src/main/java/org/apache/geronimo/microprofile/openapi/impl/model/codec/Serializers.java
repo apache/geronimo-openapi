@@ -62,6 +62,14 @@ public final class Serializers {
     }
 
     @Vetoed
+    public static class ParameterStyleSerializer extends EnumSerializer<Parameter.Style> implements JsonbAdapter<Parameter.Style, String> {
+
+        public ParameterStyleSerializer() {
+            super(Parameter.Style.class);
+        }
+    }
+
+    @Vetoed
     public static class SecuritySchemeTypeSerializer extends EnumSerializer<SecurityScheme.Type> implements JsonbAdapter<SecurityScheme.Type, String> {
 
         public SecuritySchemeTypeSerializer() {

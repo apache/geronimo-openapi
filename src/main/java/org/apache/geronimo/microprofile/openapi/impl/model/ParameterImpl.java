@@ -296,6 +296,7 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.ParameterStyleSerializer.class)
     public Style getStyle() {
         return _style;
     }
