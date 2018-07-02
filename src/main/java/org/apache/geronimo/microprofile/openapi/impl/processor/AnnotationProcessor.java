@@ -29,6 +29,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -198,7 +199,7 @@ public class AnnotationProcessor {
     private void fillSchema(final org.eclipse.microprofile.openapi.models.Components components,
                             final Type model,
                             final org.eclipse.microprofile.openapi.models.media.Schema schema) {
-        if ((Class.class.isInstance(model) && Class.class.cast(model).isPrimitive()) || String.class == model) {
+        if (Class.class.isInstance(model)) {
             if (boolean.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN);
             } else if (String.class == model) {
@@ -208,7 +209,7 @@ public class AnnotationProcessor {
             } else if (int.class == model || short.class == model || byte.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.INTEGER);
             } else {
-                // todo cache schema in components and just set the ref here - jsonb based
+                // todo cache schema in components and just set the ref here - jsonb mapping based
                 final Class modelClass = Class.class.cast(model);
                 schema.items(new SchemaImpl());
             }
@@ -222,6 +223,8 @@ public class AnnotationProcessor {
                 .map(org.eclipse.microprofile.openapi.annotations.Operation::hidden).orElse(false)) {
             return null;
         }
+
+        final Optional<List<String>> produces = findProduces(m);
 
         final OperationImpl operation = new OperationImpl();
         of(m.getAnnotationsByType(Callback.class)).filter(it -> it.length > 0).ifPresent(cbs -> {
@@ -260,7 +263,7 @@ public class AnnotationProcessor {
         of(m.getAnnotationsByType(APIResponse.class)).filter(s -> s.length > 0).ifPresent(items -> {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(items).collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
-                    it -> mapResponse(api.getComponents(), it), (a, b) -> b)));
+                    it -> mapResponse(api.getComponents(), it, produces.orElse(null)), (a, b) -> b)));
             responses.values().stream().filter(it -> it.getContent() == null).forEach(v -> {
                 Type returnType = m.getReturnType();
                 if (returnType == void.class || returnType == Response.class) {
@@ -288,13 +291,9 @@ public class AnnotationProcessor {
                 content.put("", mediaType);
                 v.content(content);
             });
-            responses.values().stream().filter(r -> r.getContent() != null).forEach(resp -> {
-                ofNullable(resp.getContent().remove("")).ifPresent(updated -> {
-                    final Optional<Produces> produces = ofNullable(ofNullable(m.getAnnotation(Produces.class))
-                            .orElseGet(() -> m.getDeclaringClass().getAnnotation(Produces.class)));
-                    produces.ifPresent(mt -> Stream.of(mt.value()).forEach(type -> resp.getContent().put(type, updated)));
-                });
-            });
+            responses.values().stream().filter(r -> r.getContent() != null)
+                     .forEach(resp -> ofNullable(resp.getContent().remove(""))
+                             .ifPresent(updated -> produces.ifPresent(mt -> mt.forEach(type -> resp.getContent().put(type, updated)))));
             operation.responses(responses);
         });
         ofNullable(m.getAnnotation(org.eclipse.microprofile.openapi.annotations.Operation.class)).ifPresent(op -> {
@@ -313,6 +312,12 @@ public class AnnotationProcessor {
                 .findFirst()
                 .ifPresent(p -> operation.requestBody(mapRequestBody(api.getComponents(), p.getAnnotation(RequestBody.class))));
         return operation;
+    }
+
+    private Optional<List<String>> findProduces(AnnotatedMethodElement m) {
+        return ofNullable(ofNullable(m.getAnnotation(Produces.class))
+                .orElseGet(() -> m.getDeclaringClass().getAnnotation(Produces.class)))
+                .map(p -> Stream.of(p.value()).collect(toList()));
     }
 
     private boolean hasJaxRsParams(final AnnotatedElement it) {
@@ -396,7 +401,7 @@ public class AnnotationProcessor {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(components.responses())
                     .collect(toMap(it -> of(it.name()).filter(c -> !c.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
-                            it -> mapResponse(impl, it), (a, b) -> b)));
+                            it -> mapResponse(impl, it, null), (a, b) -> b)));
             impl.responses(responses);
         }
         api.components(impl);
@@ -507,7 +512,7 @@ public class AnnotationProcessor {
                     final APIResponses responses = new APIResponsesImpl();
                     responses.putAll(Stream.of(co.responses())
                             .collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
-                                    it -> mapResponse(components, it))));
+                                    it -> mapResponse(components, it, null))));
                     operation.responses(responses);
                 }
                 switch (co.method().toUpperCase(ROOT)) {
@@ -545,7 +550,8 @@ public class AnnotationProcessor {
     }
 
     private org.eclipse.microprofile.openapi.models.responses.APIResponse mapResponse(
-            final org.eclipse.microprofile.openapi.models.Components components, final APIResponse response) {
+            final org.eclipse.microprofile.openapi.models.Components components, final APIResponse response,
+            final Collection<String> defaultMediaTypes) {
         final APIResponseImpl impl = new APIResponseImpl();
         impl.description(response.description());
         of(response.ref()).filter(r -> !r.isEmpty()).ifPresent(impl::ref);
@@ -557,7 +563,10 @@ public class AnnotationProcessor {
         if (response.content().length > 0) {
             final ContentImpl content = new ContentImpl();
             content.putAll(Stream.of(response.content()).collect(
-                    toMap(it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse("*/*"), it -> mapContent(components, it))));
+                    toMap(it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse(""), it -> mapContent(components, it))));
+            ofNullable(content.remove(""))
+                    .ifPresent(c -> (defaultMediaTypes == null ? singletonList("*/*") : defaultMediaTypes)
+                            .forEach(it -> content.put(it, c)));
             impl.content(content);
         }
         if (response.links().length > 0) {
