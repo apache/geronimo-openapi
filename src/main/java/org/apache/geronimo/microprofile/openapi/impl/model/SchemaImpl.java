@@ -198,11 +198,13 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbProperty("default")
     public Object getDefaultValue() {
         return _defaultValue;
     }
 
     @Override
+    @JsonbProperty("default")
     public void setDefaultValue(final Object _defaultValue) {
         this._defaultValue = _defaultValue;
     }

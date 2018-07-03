@@ -19,6 +19,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import java.util.LinkedHashMap;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
 
 import org.eclipse.microprofile.openapi.models.responses.APIResponse;
 import org.eclipse.microprofile.openapi.models.responses.APIResponses;
@@ -40,6 +41,7 @@ public class APIResponsesImpl extends LinkedHashMap<String, APIResponse> impleme
     }
 
     @Override
+    @JsonbProperty("default")
     public void setDefaultValue(final APIResponse _defaultValue) {
         this._default = _defaultValue;
     }

@@ -30,7 +30,9 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,6 +55,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 import org.apache.cxf.jaxrs.ext.PATCH;
@@ -114,6 +117,7 @@ import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
 import org.eclipse.microprofile.openapi.annotations.servers.Server;
 import org.eclipse.microprofile.openapi.annotations.servers.ServerVariable;
+import org.eclipse.microprofile.openapi.annotations.servers.Servers;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.tags.Tags;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
@@ -139,8 +143,6 @@ public class AnnotationProcessor {
                 .map(t -> of(t.ref()).filter(it -> !it.isEmpty())
                         .flatMap(ref -> api.getTags().stream().filter(it -> it.getName().equals(ref)).findFirst())
                         .orElseGet(() -> mapTag(t))).forEach(api::addTag);
-
-        processServers(api, annotatedType.getAnnotationsByType(Server.class));
 
         Stream.of(annotatedType.getAnnotationsByType(SecurityScheme.class))
                 .forEach(s -> {
@@ -188,7 +190,19 @@ public class AnnotationProcessor {
                 .forEach(doc -> api.setExternalDocs(mapExternalDocumentation(doc)));
         Stream.of(type.getAnnotationsByType(Tag.class)).forEach(tag -> api.addTag(mapTag(tag)));
         Stream.of(type.getAnnotationsByType(SecurityRequirement.class))
-                .forEach(securityRequirementeme -> api.security(singletonList(mapSecurity(securityRequirementeme))));
+              .forEach(security -> {
+                  if (api.getSecurity() == null) {
+                      api.setSecurity(new ArrayList<>(1));
+                  }
+                  api.addSecurityRequirement(mapSecurity(security));
+              });
+        Stream.of(type.getAnnotationsByType(SecurityScheme.class))
+                .forEach(scheme -> {
+                    if (api.getComponents().getSecuritySchemes() == null) {
+                        api.getComponents().setSecuritySchemes(new HashMap<>());
+                    }
+                    api.getComponents().addSecurityScheme(scheme.securitySchemeName(), mapSecurityScheme(scheme));
+                });
     }
 
     private org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
@@ -231,12 +245,12 @@ public class AnnotationProcessor {
         final OperationImpl operation = new OperationImpl();
         of(m.getAnnotationsByType(Callback.class)).filter(it -> it.length > 0).ifPresent(cbs -> {
             final Map<String, org.eclipse.microprofile.openapi.models.callbacks.Callback> callbacks = Stream.of(cbs)
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapCallback(api.getComponents(), it)));
             operation.callbacks(callbacks);
         });
-        of(m.getAnnotationsByType(Server.class)).filter(it -> it.length > 0)
-                .ifPresent(it -> operation.servers(Stream.of(it).map(this::mapServer).collect(toList())));
+        ofNullable(ofNullable(findServers(m)).orElseGet(() -> findServers(declaring)))
+                      .ifPresent(it -> operation.servers(Stream.of(it).map(this::mapServer).collect(toList())));
         ofNullable(m.getAnnotation(SecurityScheme.class))
                 .ifPresent(s -> api.getComponents().addSecurityScheme(s.ref(), mapSecurityScheme(s)));
         operation.security(of(Stream.concat(
@@ -320,10 +334,18 @@ public class AnnotationProcessor {
                         .orElseGet(() -> new ParameterImpl().schema(mapSchemaFromClass(api.getComponents(), it.getType()))))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
-                .filter(p -> p.isAnnotationPresent(RequestBody.class))
+                .filter(p -> p.isAnnotationPresent(RequestBody.class) || (!p.isAnnotationPresent(Suspended.class) && !p.isAnnotationPresent(Context.class)))
                 .findFirst()
-                .ifPresent(p -> operation.requestBody(mapRequestBody(api.getComponents(), p.getAnnotation(RequestBody.class))));
+                .ifPresent(p -> operation.requestBody(mapRequestBody(api.getComponents(), ofNullable(p.getAnnotation(RequestBody.class))
+                    .orElseGet(() -> m.getAnnotation(RequestBody.class)))));
         return operation;
+    }
+
+    private Server[] findServers(final AnnotatedElement annotatedElement) {
+        if (annotatedElement.getAnnotation(Server.class) != null || annotatedElement.getAnnotation(Servers.class) != null) {
+            return annotatedElement.getAnnotationsByType(Server.class);
+        }
+        return null;
     }
 
     private Tag[] findTags(final AnnotatedMethodElement m, final AnnotatedElement declaring) {
@@ -401,42 +423,42 @@ public class AnnotationProcessor {
         processCallbacks(impl, components.callbacks());
         if (components.links().length > 0) {
             impl.links(Stream.of(components.links()).collect(
-                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())), this::mapLink)));
+                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapLink)));
         }
         if (components.securitySchemes().length > 0) {
             impl.securitySchemes(Stream.of(components.securitySchemes())
                     .collect(toMap(
-                            it -> of(it.securitySchemeName()).filter(v -> !v.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                            it -> of(it.securitySchemeName()).filter(v -> !v.isEmpty()).orElseGet(it::ref),
                             this::mapSecurityScheme)));
         }
         if (components.requestBodies().length > 0) {
             impl.requestBodies(Stream.of(components.requestBodies())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapRequestBody(impl, it))));
         }
         if (components.parameters().length > 0) {
             impl.parameters(Stream.of(components.parameters())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapParameter(null, api.getComponents(), it))));
         }
         if (components.headers().length > 0) {
             impl.headers(Stream.of(components.headers())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapHeader(impl, it))));
         }
         if (components.examples().length > 0) {
             impl.examples(Stream.of(components.examples()).collect(toMap(
-                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())), this::mapExample)));
+                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
         }
         if (components.schemas().length > 0) {
             impl.schemas(Stream.of(components.schemas())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapSchema(impl, it))));
         }
         if (components.responses().length > 0) {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(components.responses())
-                    .collect(toMap(it -> of(it.name()).filter(c -> !c.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(c -> !c.isEmpty()).orElseGet(it::ref),
                             it -> mapResponse(impl, it, null), (a, b) -> b)));
             impl.responses(responses);
         }
@@ -517,7 +539,7 @@ public class AnnotationProcessor {
     private void processCallbacks(final org.eclipse.microprofile.openapi.models.Components impl, final Callback[] callbacks) {
         if (callbacks.length > 0) {
             impl.setCallbacks(Stream.of(callbacks)
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapCallback(impl, it))));
         }
     }
@@ -593,7 +615,7 @@ public class AnnotationProcessor {
         of(response.ref()).filter(r -> !r.isEmpty()).ifPresent(impl::ref);
         if (response.headers().length > 0) {
             impl.headers(Stream.of(response.headers())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapHeader(components, it))));
         }
         if (response.content().length > 0) {
@@ -607,7 +629,7 @@ public class AnnotationProcessor {
         }
         if (response.links().length > 0) {
             impl.links(Stream.of(response.links()).collect(
-                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())), this::mapLink)));
+                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapLink)));
         }
         return impl;
     }
@@ -628,15 +650,15 @@ public class AnnotationProcessor {
     private org.eclipse.microprofile.openapi.models.parameters.RequestBody mapRequestBody(
             final org.eclipse.microprofile.openapi.models.Components components, final RequestBody requestBody) {
 
-        final RequestBodyImpl impl = new RequestBodyImpl();
-        impl.description(requestBody.description());
-        impl.ref(requestBody.ref());
-        impl.required(requestBody.required());
-        if (requestBody.content().length > 0) {
-            final ContentImpl content = new ContentImpl();
-            content.putAll(Stream.of(requestBody.content()).collect(
-                    toMap(it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse("*/*"), it -> mapContent(components, it))));
-            impl.content(content);
+        final org.eclipse.microprofile.openapi.models.parameters.RequestBody impl = new RequestBodyImpl()
+                .content(new ContentImpl());
+        if (requestBody != null) {
+            impl.description(requestBody.description());
+            impl.ref(requestBody.ref());
+            impl.required(requestBody.required());
+            impl.getContent().putAll(Stream.of(requestBody.content()).collect(toMap(
+                    it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse("*/*"),
+                    it -> mapContent(components, it))));
         }
         return impl;
     }
@@ -649,7 +671,7 @@ public class AnnotationProcessor {
         impl.setSchema(mapSchema(components, content.schema()));
         if (content.examples().length > 0) {
             impl.examples(Stream.of(content.examples()).collect(toMap(
-                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())), this::mapExample)));
+                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
         }
         return impl;
     }
@@ -664,7 +686,7 @@ public class AnnotationProcessor {
                 .ifPresent(v -> impl.style(Encoding.Style.valueOf(v)));
         if (e.headers().length > 0) {
             impl.headers(Stream.of(e.headers())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapHeader(components, it))));
         }
         return impl;
@@ -686,6 +708,9 @@ public class AnnotationProcessor {
     private org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
             final org.eclipse.microprofile.openapi.models.Components components, final Schema schema) {
         if (schema.hidden() || (schema.implementation() == Void.class && schema.name().isEmpty() && schema.ref().isEmpty())) {
+            if (schema.type() != SchemaType.DEFAULT) {
+                return new SchemaImpl().type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.valueOf(schema.type().name()));
+            }
             return null;
         }
 
@@ -777,10 +802,7 @@ public class AnnotationProcessor {
         if (ref.startsWith("#")) {
             return ref;
         }
-        if (components.getSchemas().containsKey(ref)) {
-            return "#/components/schemas/" + ref;
-        }
-        return ref;
+        return "#/components/schemas/" + ref;
     }
 
     private BigDecimal toBigDecimal(final String minimum) {
@@ -851,7 +873,7 @@ public class AnnotationProcessor {
         of(parameter.example()).filter(v -> !v.isEmpty()).ifPresent(impl::example);
         if (parameter.examples().length > 0) {
             impl.examples(Stream.of(parameter.examples()).collect(toMap(
-                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> mapRefToName(it.ref())), this::mapExample)));
+                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
         }
         if (annotatedElement != null) {
             if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
@@ -880,25 +902,17 @@ public class AnnotationProcessor {
         return Stream.of(extensions).collect(toMap(Extension::name, Extension::value));
     }
 
-    private String mapRefToName(final String ref) {
-        final String[] segments = ref.split("/");
-        return segments[segments.length - 1];
-    }
-
     private void processDefinition(final OpenAPI api, final OpenAPIDefinition annotation) {
         processInfo(api, annotation.info());
         processTags(api, annotation.tags());
         api.externalDocs(mapExternalDocumentation(annotation.externalDocs()));
         processSecurity(api, annotation.security());
-        processServers(api, annotation.servers());
+        api.servers(mapServers(annotation.servers()));
         processComponents(api, annotation.components());
     }
 
-    private void processServers(final OpenAPI api, final Server[] servers) {
-        if (servers.length == 0) {
-            return;
-        }
-        api.servers(Stream.of(servers).map(this::mapServer).collect(toList()));
+    private List<org.eclipse.microprofile.openapi.models.servers.Server> mapServers(final Server[] servers) {
+        return servers.length == 0 ? null : Stream.of(servers).map(this::mapServer).collect(toList());
     }
 
     private org.eclipse.microprofile.openapi.models.servers.Server mapServer(final Server server) {

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.servers.ServerVariable;
@@ -52,11 +53,13 @@ public class ServerVariableImpl implements ServerVariable {
     }
 
     @Override
+    @JsonbProperty("default")
     public String getDefaultValue() {
         return _defaultValue;
     }
 
     @Override
+    @JsonbProperty("default")
     public void setDefaultValue(final String _defaultValue) {
         this._defaultValue = _defaultValue;
     }
@@ -84,11 +87,13 @@ public class ServerVariableImpl implements ServerVariable {
     }
 
     @Override
+    @JsonbProperty("enum")
     public List<String> getEnumeration() {
         return _enumeration;
     }
 
     @Override
+    @JsonbProperty("enum")
     public void setEnumeration(final List<String> _enumeration) {
         this._enumeration = _enumeration;
     }
