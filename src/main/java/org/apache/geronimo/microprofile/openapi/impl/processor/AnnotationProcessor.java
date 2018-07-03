@@ -25,6 +25,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -114,6 +115,7 @@ import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
 import org.eclipse.microprofile.openapi.annotations.servers.Server;
 import org.eclipse.microprofile.openapi.annotations.servers.ServerVariable;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.eclipse.microprofile.openapi.annotations.tags.Tags;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
 import org.eclipse.microprofile.openapi.models.Operation;
 import org.eclipse.microprofile.openapi.models.PathItem;
@@ -243,23 +245,33 @@ public class AnnotationProcessor {
                 .map(this::mapSecurity).collect(toList()))
                 .filter(s -> !s.isEmpty())
                 .orElse(null));
-        of(m.getAnnotationsByType(Tag.class)).filter(s -> s.length > 0)
-                .ifPresent(tags -> operation.tags(Stream.of(tags)
-                        .map(it -> of(it.name()).map(tag -> {
-                            api.getTags().add(mapTag(it));
-                            return tag;
-                        }).filter(v -> !v.isEmpty()).orElseGet(() -> {
-                            final String ref = it.ref();
-                            return Stream.of(declaring.getAnnotationsByType(Tag.class))
+
+        ofNullable(findTags(m, declaring))
+                .map(tags -> Stream.of(tags)
+                     .map(it -> of(it.name())
+                            .filter(v -> !v.isEmpty())
+                            .map(tag -> {
+                                api.getTags().add(mapTag(it));
+                                return tag;
+                            }).filter(v -> !v.isEmpty())
+                            .orElseGet(() -> {
+                                final String ref = it.ref();
+                                return Stream.of(declaring.getAnnotationsByType(Tag.class))
                                     .filter(t -> t.name().equals(ref))
                                     .findFirst()
                                     .map(Tag::name)
+                                    .filter(v -> !v.isEmpty())
                                     .orElseGet(() -> api.getTags().stream()
-                                            .filter(t -> t.getName().equals(ref))
-                                            .findFirst()
-                                            .map(org.eclipse.microprofile.openapi.models.tags.Tag::getName)
-                                            .orElse(ref));
-                        })).collect(toList())));
+                                        .filter(t -> t.getName().equals(ref))
+                                        .findFirst()
+                                        .map(org.eclipse.microprofile.openapi.models.tags.Tag::getName)
+                                        .orElse(ref));
+                           }))
+                     .distinct()
+                     .filter(v -> !v.isEmpty())
+                     .collect(toList()))
+                .ifPresent(operation::tags);
+
         of(m.getAnnotationsByType(APIResponse.class)).filter(s -> s.length > 0).ifPresent(items -> {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(items).collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
@@ -312,6 +324,30 @@ public class AnnotationProcessor {
                 .findFirst()
                 .ifPresent(p -> operation.requestBody(mapRequestBody(api.getComponents(), p.getAnnotation(RequestBody.class))));
         return operation;
+    }
+
+    private Tag[] findTags(final AnnotatedMethodElement m, final AnnotatedElement declaring) {
+        return ofNullable(findTags(m)).orElseGet(() -> findTags(declaring));
+    }
+
+    private Tag[] findTags(final AnnotatedElement m) {
+        final Tag mTag = m.getAnnotation(Tag.class);
+        final Tags mTags = m.getAnnotation(Tags.class);
+        if (mTag != null || mTags != null) {
+            if (mTag == null) {
+                return mapTagsAnnotationToTags(mTags).toArray(Tag[]::new);
+            }
+            return Stream.concat(Stream.of(mTag), ofNullable(mTags)
+                    .map(t -> t.refs().length == 0 ? Stream.of(t.value()) : mapTagsAnnotationToTags(t))
+                    .orElseGet(Stream::empty))
+                 .filter(Objects::nonNull)
+                 .toArray(Tag[]::new);
+        }
+        return null;
+    }
+
+    private Stream<Tag> mapTagsAnnotationToTags(Tags t) {
+        return Stream.concat(Stream.of(t.value()), Stream.of(t.refs()).map(TagAnnotation::new));
     }
 
     private Optional<List<String>> findProduces(AnnotatedMethodElement m) {
@@ -912,7 +948,7 @@ public class AnnotationProcessor {
         final TagImpl impl = new TagImpl();
         impl.name(tag.name());
         impl.description(tag.description());
-        impl.externalDocs(mapExternalDocumentation(tag.externalDocs()));
+        impl.externalDocs(ofNullable(tag.externalDocs()).map(this::mapExternalDocumentation).orElse(null));
         return impl;
     }
 
@@ -944,5 +980,38 @@ public class AnnotationProcessor {
         impl.contact(contactImpl);
         impl.license(licenseImpl);
         api.info(impl);
+    }
+
+    private static class TagAnnotation implements Tag {
+        private final String ref;
+
+        private TagAnnotation(final String ref) {
+            this.ref = ref;
+        }
+
+        @Override
+        public String name() {
+            return "";
+        }
+
+        @Override
+        public String description() {
+            return "";
+        }
+
+        @Override
+        public ExternalDocumentation externalDocs() {
+            return null;
+        }
+
+        @Override
+        public String ref() {
+            return ref;
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return Tag.class;
+        }
     }
 }
