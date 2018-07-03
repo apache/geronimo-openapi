@@ -29,7 +29,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -131,6 +130,7 @@ import org.eclipse.microprofile.openapi.models.security.Scopes;
 
 @Vetoed
 public class AnnotationProcessor {
+    private final SchemaProcessor schemaProcessor = new SchemaProcessor();
 
     public void processClass(final String basePath, final OpenAPI api, final AnnotatedElement annotatedType,
                              final Stream<AnnotatedMethodElement> methods) {
@@ -203,35 +203,6 @@ public class AnnotationProcessor {
                     }
                     api.getComponents().addSecurityScheme(scheme.securitySchemeName(), mapSecurityScheme(scheme));
                 });
-    }
-
-    private org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
-            final org.eclipse.microprofile.openapi.models.Components components, final Type model) {
-        final org.eclipse.microprofile.openapi.models.media.Schema schema = new SchemaImpl();
-        fillSchema(components, model, schema);
-        return schema;
-    }
-
-    private void fillSchema(final org.eclipse.microprofile.openapi.models.Components components,
-                            final Type model,
-                            final org.eclipse.microprofile.openapi.models.media.Schema schema) {
-        if (Class.class.isInstance(model)) {
-            if (boolean.class == model) {
-                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN);
-            } else if (String.class == model) {
-                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING);
-            } else if (double.class == model || float.class == model) {
-                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.NUMBER);
-            } else if (int.class == model || short.class == model || byte.class == model) {
-                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.INTEGER);
-            } else {
-                // todo cache schema in components and just set the ref here - jsonb mapping based
-                final Class modelClass = Class.class.cast(model);
-                schema.items(new SchemaImpl());
-            }
-        } else {
-            schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
-        }
     }
 
     private Operation buildOperation(final OpenAPI api, final AnnotatedMethodElement m, final AnnotatedElement declaring) {
@@ -313,7 +284,7 @@ public class AnnotationProcessor {
                 }
                 final ContentImpl content = new ContentImpl();
                 final MediaTypeImpl mediaType = new MediaTypeImpl();
-                mediaType.setSchema(mapSchemaFromClass(api.getComponents(), returnType));
+                mediaType.setSchema(schemaProcessor.mapSchemaFromClass(api.getComponents(), returnType));
                 content.put("", mediaType);
                 v.content(content);
             });
@@ -331,7 +302,7 @@ public class AnnotationProcessor {
         operation.parameters(Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameter.class) || hasJaxRsParams(it))
                 .map(it -> buildParameter(it, api.getComponents())
-                        .orElseGet(() -> new ParameterImpl().schema(mapSchemaFromClass(api.getComponents(), it.getType()))))
+                        .orElseGet(() -> new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(api.getComponents(), it.getType()))))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
                 .filter(p -> p.isAnnotationPresent(RequestBody.class) || (!p.isAnnotationPresent(Suspended.class) && !p.isAnnotationPresent(Context.class)))
@@ -399,7 +370,7 @@ public class AnnotationProcessor {
                         } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
                             parameter.name(annotatedElement.getAnnotation(QueryParam.class).value());
                         }
-                        parameter.schema(mapSchemaFromClass(components, annotatedElement.getType()))
+                        parameter.schema(schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType()))
                                  .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE);
                         return parameter;
                     }
@@ -463,6 +434,13 @@ public class AnnotationProcessor {
             impl.responses(responses);
         }
         api.components(impl);
+    }
+
+    private org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
+            final org.eclipse.microprofile.openapi.models.Components impl, final Schema schema) {
+        return ofNullable(schemaProcessor.mapSchema(impl, schema))
+                .map(s -> s.externalDocs(mapExternalDocumentation(schema.externalDocs())))
+                .orElse(null);
     }
 
     private org.eclipse.microprofile.openapi.models.security.SecurityScheme mapSecurityScheme(
@@ -668,7 +646,7 @@ public class AnnotationProcessor {
         if (content.encoding().length > 0) {
             Stream.of(content.encoding()).forEach(e -> impl.addEncoding(e.name(), mapEncoding(components, e)));
         }
-        impl.setSchema(mapSchema(components, content.schema()));
+        impl.setSchema(schemaProcessor.mapSchema(components, content.schema()));
         if (content.examples().length > 0) {
             impl.examples(Stream.of(content.examples()).collect(toMap(
                     it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
@@ -700,134 +678,9 @@ public class AnnotationProcessor {
         impl.description(header.description());
         impl.allowEmptyValue(header.allowEmptyValue());
         impl.required(header.required());
-        impl.schema(mapSchema(components, header.schema()));
+        impl.schema(schemaProcessor.mapSchema(components, header.schema()));
         impl.style(org.eclipse.microprofile.openapi.models.headers.Header.Style.SIMPLE);
         return impl;
-    }
-
-    private org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
-            final org.eclipse.microprofile.openapi.models.Components components, final Schema schema) {
-        if (schema.hidden() || (schema.implementation() == Void.class && schema.name().isEmpty() && schema.ref().isEmpty())) {
-            if (schema.type() != SchemaType.DEFAULT) {
-                return new SchemaImpl().type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.valueOf(schema.type().name()));
-            }
-            return null;
-        }
-
-        final SchemaImpl impl = new SchemaImpl();
-        if (!schema.ref().isEmpty()) {
-            impl.ref(resolveSchemaRef(components, schema.ref()));
-        } else {
-            if (schema.implementation() != Void.class) {
-                fillSchema(components, schema.implementation(), impl);
-            }
-            impl.deprecated(schema.deprecated());
-            if (schema.type() != SchemaType.DEFAULT) {
-                impl.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.valueOf(schema.type().name()));
-            }
-            impl.title(schema.title());
-            impl.description(schema.description());
-            if (!schema.format().isEmpty()) {
-                impl.format(schema.format());
-            }
-            if (!schema.ref().isEmpty()) {
-                impl.ref(schema.ref());
-            }
-            if (!schema.example().isEmpty()) {
-                impl.example(schema.example());
-            }
-            of(schema.not()).filter(it -> it != Void.class).ifPresent(t -> impl.not(mapSchemaFromClass(components, t)));
-            final List<org.eclipse.microprofile.openapi.models.media.Schema> oneOf = Stream.of(schema.oneOf())
-                 .map(it -> mapSchemaFromClass(components, it)).collect(toList());
-            if (!oneOf.isEmpty()) {
-                impl.oneOf(oneOf);
-            }
-            final List<org.eclipse.microprofile.openapi.models.media.Schema> anyOf = Stream.of(schema.anyOf())
-                 .map(it -> mapSchemaFromClass(components, it)).collect(toList());
-            if (!anyOf.isEmpty()) {
-                impl.anyOf(anyOf);
-            }
-            final List<org.eclipse.microprofile.openapi.models.media.Schema> allOf = Stream.of(schema.allOf())
-                 .map(it -> mapSchemaFromClass(components, it)).collect(toList());
-            if (!allOf.isEmpty()) {
-                impl.allOf(allOf);
-            }
-            if (schema.multipleOf() != 0) {
-                impl.multipleOf(BigDecimal.valueOf(schema.multipleOf()));
-            }
-            impl.minimum(toBigDecimal(schema.minimum()));
-            impl.maximum(toBigDecimal(schema.maximum()));
-            impl.exclusiveMinimum(schema.exclusiveMinimum());
-            impl.exclusiveMaximum(schema.exclusiveMaximum());
-            if (schema.minLength() >= 0) {
-                impl.minLength(schema.minLength());
-            }
-            if (schema.maxLength() >= 0) {
-                impl.maxLength(schema.maxLength());
-            }
-            if (!schema.pattern().isEmpty()) {
-                impl.pattern(schema.pattern());
-            }
-            impl.nullable(schema.nullable());
-            if (schema.minProperties() > 0) {
-                impl.minProperties(schema.minProperties());
-            }
-            if (schema.minProperties() > 0) {
-                impl.maxProperties(schema.maxProperties());
-            }
-            if (schema.minItems() > Integer.MIN_VALUE) {
-                impl.minItems(schema.minItems());
-            }
-            if (schema.minItems() < Integer.MAX_VALUE) {
-                impl.maxItems(schema.maxItems());
-            }
-            impl.uniqueItems(schema.uniqueItems());
-            impl.readOnly(schema.readOnly());
-            impl.writeOnly(schema.writeOnly());
-            impl.externalDocs(mapExternalDocumentation(schema.externalDocs()));
-            impl.defaultValue(toType(schema.defaultValue(), impl.getType()));
-            if (schema.required()) {
-                impl.required(Stream.of(schema.requiredProperties()).collect(toList()));
-            }
-            if (schema.discriminatorMapping().length > 0) {
-                impl.discriminator(new DiscriminatorImpl().mapping(Stream.of(schema.discriminatorMapping())
-                        .collect(toMap(DiscriminatorMapping::value, it -> it.schema().getName()))));
-            }
-            impl.setEnumeration(Stream.of(schema.enumeration()).collect(toList()));
-        }
-        return impl;
-    }
-
-    private String resolveSchemaRef(final org.eclipse.microprofile.openapi.models.Components components, final String ref) {
-        if (ref.startsWith("#")) {
-            return ref;
-        }
-        return "#/components/schemas/" + ref;
-    }
-
-    private BigDecimal toBigDecimal(final String minimum) {
-        return minimum.isEmpty() ? null : new BigDecimal(minimum);
-    }
-
-    private Object toType(final String s, final org.eclipse.microprofile.openapi.models.media.Schema.SchemaType type) {
-        if (type == null || s.isEmpty()) {
-            return null;
-        }
-        switch (type) {
-            case STRING:
-                return s;
-            case INTEGER:
-                return Integer.valueOf(s);
-            case NUMBER:
-                return Double.valueOf(s);
-            case BOOLEAN:
-                return Boolean.parseBoolean(s);
-            case OBJECT:
-            case ARRAY:
-                // todo using jsonb
-            default:
-                return null;
-        }
     }
 
     private List<org.eclipse.microprofile.openapi.models.parameters.Parameter> mapParameters(
@@ -849,14 +702,14 @@ public class AnnotationProcessor {
                 .orElse(null));
         impl.allowEmptyValue(parameter.allowEmptyValue());
         impl.allowReserved(parameter.allowReserved());
-        impl.schema(ofNullable(mapSchema(components, parameter.schema())).orElseGet(() -> {
+        impl.schema(ofNullable(schemaProcessor.mapSchema(components, parameter.schema())).orElseGet(() -> {
             if (annotatedElement == null) {
                 return null;
             }
-            return mapSchemaFromClass(components, annotatedElement.getType());
+            return schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType());
         }));
         if (impl.getSchema() != null && impl.getSchema().getType() == null && annotatedElement != null) {
-            fillSchema(components, annotatedElement.getType(), impl.getSchema());
+            schemaProcessor.fillSchema(components, annotatedElement.getType(), impl.getSchema());
         }
         of(parameter.content()).filter(it -> it.length > 0).map(Stream::of).ifPresent(c -> {
             final ContentImpl content = new ContentImpl();
@@ -864,7 +717,7 @@ public class AnnotationProcessor {
                     toMap(it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse("*/*"), it -> {
                         final MediaType mediaType = mapContent(components, it);
                         if (mediaType.getSchema() == null && annotatedElement != null) {
-                            mediaType.schema(mapSchemaFromClass(components, annotatedElement.getType()));
+                            mediaType.schema(schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType()));
                         }
                         return mediaType;
                     })));
