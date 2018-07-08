@@ -64,7 +64,6 @@ import org.apache.geronimo.microprofile.openapi.impl.model.CallbackImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ContactImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ContentImpl;
-import org.apache.geronimo.microprofile.openapi.impl.model.DiscriminatorImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.EncodingImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ExampleImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ExternalDocumentationImpl;
@@ -80,7 +79,6 @@ import org.apache.geronimo.microprofile.openapi.impl.model.ParameterImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.PathItemImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.RequestBodyImpl;
-import org.apache.geronimo.microprofile.openapi.impl.model.SchemaImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ScopesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.SecurityRequirementImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.SecuritySchemeImpl;
@@ -93,7 +91,6 @@ import org.eclipse.microprofile.openapi.annotations.ExternalDocumentation;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
 import org.eclipse.microprofile.openapi.annotations.callbacks.Callback;
 import org.eclipse.microprofile.openapi.annotations.enums.ParameterStyle;
-import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeIn;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType;
 import org.eclipse.microprofile.openapi.annotations.extensions.Extension;
@@ -104,7 +101,6 @@ import org.eclipse.microprofile.openapi.annotations.info.License;
 import org.eclipse.microprofile.openapi.annotations.links.Link;
 import org.eclipse.microprofile.openapi.annotations.links.LinkParameter;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
-import org.eclipse.microprofile.openapi.annotations.media.DiscriminatorMapping;
 import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
@@ -423,7 +419,8 @@ public class AnnotationProcessor {
         }
         if (components.schemas().length > 0) {
             impl.schemas(Stream.of(components.schemas())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(
+                            it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapSchema(impl, it))));
         }
         if (components.responses().length > 0) {
@@ -659,7 +656,7 @@ public class AnnotationProcessor {
         final EncodingImpl impl = new EncodingImpl();
         impl.allowReserved(e.allowReserved());
         impl.explode(e.explode());
-        impl.contentType(e.contentType());
+        impl.contentType(of(e.contentType()).filter(v -> !v.isEmpty()).orElse("*/*"));
         of(e.style()).filter(it -> !it.isEmpty()).map(it -> it.toUpperCase(ROOT))
                 .ifPresent(v -> impl.style(Encoding.Style.valueOf(v)));
         if (e.headers().length > 0) {

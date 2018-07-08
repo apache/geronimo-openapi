@@ -50,7 +50,7 @@ public class SchemaProcessor {
                     fillSchema(components, model, s);
                     return s;
                 }).get();
-        if (!cached && Class.class.isInstance(model)) {
+        if (!cached && Class.class.isInstance(model) && !Class.class.cast(model).isPrimitive() && model != String.class) {
             cache.put(Class.class.cast(model), schema);
         }
         return schema;
@@ -74,27 +74,14 @@ public class SchemaProcessor {
                 ofNullable(from.getAnnotation(Schema.class)).ifPresent(s -> sets(components, Schema.class.cast(s), schema));
                 schema.properties(new HashMap<>());
                 Class<?> current = from;
-                while (current != null && current != Object.class) { // todo: simplify with a Pair model?
-                    schema.getProperties().putAll(Stream.of(current.getDeclaredFields())
+                while (current != null && current != Object.class) {
+                    Stream.of(current.getDeclaredFields())
                             .filter(f -> f.isAnnotationPresent(Schema.class) && !f.getAnnotation(Schema.class).hidden())
-                            .peek(f -> {
-                                if (f.getAnnotation(Schema.class).required()) {
-                                    if (schema.getRequired() == null) {
-                                        schema.required(new ArrayList<>());
-                                    }
-                                    final String name = findFieldName(f);
-                                    if (!schema.getRequired().contains(name)) {
-                                        schema.getRequired().add(name);
-                                    }
-                                }
-                            })
-                            .collect(toMap(this::findFieldName,
-                                    f -> ofNullable(mapSchema(components, f.getAnnotation(Schema.class))).orElseGet(() -> {
-                                        final org.eclipse.microprofile.openapi.models.media.Schema schemaFromClass = mapSchemaFromClass(
-                                                components, f.getGenericType());
-                                        mergeSchema(components, schemaFromClass, f.getAnnotation(Schema.class));
-                                        return schemaFromClass;
-                                    }))));
+                            .peek(f -> handleRequired(schema, f))
+                            .forEach(f -> {
+                                final String fieldName = findFieldName(f);
+                                schema.getProperties().put(fieldName, mapField(components, f));
+                            });
                     current = current.getSuperclass();
                 }
             }
@@ -108,6 +95,28 @@ public class SchemaProcessor {
                 }
             }
         }
+    }
+
+    private void handleRequired(final org.eclipse.microprofile.openapi.models.media.Schema schema, final Field f) {
+        if (!f.getAnnotation(Schema.class).required()) {
+            return;
+        }
+        if (schema.getRequired() == null) {
+            schema.required(new ArrayList<>());
+        }
+        final String name = findFieldName(f);
+        if (!schema.getRequired().contains(name)) {
+            schema.getRequired().add(name);
+        }
+    }
+
+    private org.eclipse.microprofile.openapi.models.media.Schema mapField(final Components components, final Field f) {
+        return ofNullable(mapSchema(components, f.getAnnotation(Schema.class))).orElseGet(() -> {
+            final org.eclipse.microprofile.openapi.models.media.Schema schemaFromClass = mapSchemaFromClass(
+                    components, f.getGenericType());
+            mergeSchema(components, schemaFromClass, f.getAnnotation(Schema.class));
+            return schemaFromClass;
+        });
     }
 
     private String findFieldName(final Field f) {

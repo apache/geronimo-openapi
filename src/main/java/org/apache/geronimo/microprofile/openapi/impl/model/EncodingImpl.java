@@ -19,9 +19,11 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.headers.Header;
 import org.eclipse.microprofile.openapi.models.media.Encoding;
@@ -122,11 +124,13 @@ public class EncodingImpl implements Encoding {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.EncodingStyleSerializer.class)
     public Style getStyle() {
         return _style;
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.EncodingStyleSerializer.class)
     public void setStyle(final Style _style) {
         this._style = _style;
     }
