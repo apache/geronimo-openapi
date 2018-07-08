@@ -39,7 +39,6 @@ import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessBean;
-import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
 
@@ -120,11 +119,7 @@ public class GeronimoOpenAPIExtension implements Extension {
         final OpenAPI api = ofNullable(config.read(OASConfig.MODEL_READER, null))
                 .map(value -> newInstance(current, value))
                 .map(it -> OASModelReader.class.cast(it).buildModel())
-                .orElseGet(() -> {
-                    final BeanManager beanManager = current.getBeanManager();
-                    final OpenAPI impl = current.select(DefaultLoader.class).get().loadDefaultApi();
-                    return impl;
-                });
+                .orElseGet(() -> current.select(DefaultLoader.class).get().loadDefaultApi());
 
         final BeanManager beanManager = current.getBeanManager();
         processor.processApplication(api, new ElementImpl(beanManager.createAnnotatedType(application)));
@@ -132,7 +127,7 @@ public class GeronimoOpenAPIExtension implements Extension {
             return api.paths(new PathsImpl());
         }
 
-        final String base = getApplicationBinding(application);
+        final String base = processor.getApplicationBinding(application);
         beans.filter(c -> (excludeClasses == null || !excludeClasses.contains(c.getName())))
                 .filter(c -> (excludePackages == null || excludePackages.stream().noneMatch(it -> c.getName().startsWith(it))))
                 .map(beanManager::createAnnotatedType)
@@ -143,14 +138,6 @@ public class GeronimoOpenAPIExtension implements Extension {
                 .map(it -> newInstance(current, it))
                 .map(i -> new FilterImpl(OASFilter.class.cast(i)).filter(api))
                 .orElse(api);
-    }
-
-    private String getApplicationBinding(final Class<?> application) {
-        // todo: use servlet to get the servlet mapping which is a valid deployment too
-        return ofNullable(application.getAnnotation(ApplicationPath.class)).map(ApplicationPath::value)
-                .filter(it -> !"/".equals(it))
-                .map(it -> it.endsWith("*") ? it.substring(0, it.length() - 1) : it)
-                .orElse("");
     }
 
     private Object newInstance(final CDI<Object> current, final String value) {

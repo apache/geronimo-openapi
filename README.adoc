@@ -1,6 +1,8 @@
-= Geronimo Microprofile OpenAPI Implementation
+= Geronimo Microprofile OpenAPI
 
-== Artifact
+== Implementation
+
+=== Artifact
 
 [source,xml]
 ----
@@ -11,9 +13,42 @@
 </parent>
 ----
 
-== Dependencies
+=== Dependencies
 
 1. JAX-RS+Servlet
 2. CDI (optional if used as a library)
 3. JSONB (for JSON support)
 4. Jackson+YAML extension (for YAML support)
+
+
+== Maven Plugin
+
+You can define the maven plugin to generate at build time the `openapi.json` file.
+Then the runtime is able to load it directly and merge it with the current runtime.
+The big advantage is to be able to use it without the runtime for documentation purposes.
+
+Here is how to define it:
+
+[source,xml]
+----
+<plugin>
+  <groupId>org.apache.geronimo</groupId>
+  <artifactId>geronimo-openapi-maven-plugin</artifactId>
+  <version>${openapi.version}</version>
+  <executions>
+    <execution>
+      <id>generate-openapi.json</id>
+      <goals>
+        <goal>openapi.json</goal>
+      </goals>
+      <configuration>
+        <application>com.test.MyApp</application>
+        <endpointClasses>
+          <endpointClass>com.test.SomeEndpoint</endpointClass>
+          <endpointClass>com.test.SomeOtherEndpoint</endpointClass>
+        </endpointClasses>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+----

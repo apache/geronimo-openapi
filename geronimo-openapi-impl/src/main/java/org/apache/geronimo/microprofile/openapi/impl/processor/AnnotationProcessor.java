@@ -40,6 +40,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
+import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -907,6 +908,14 @@ public class AnnotationProcessor {
         impl.contact(contactImpl);
         impl.license(licenseImpl);
         api.info(impl);
+    }
+
+    public String getApplicationBinding(final Class<?> application) {
+        // todo: use servlet to get the servlet mapping which is a valid deployment too
+        return ofNullable(application.getAnnotation(ApplicationPath.class)).map(ApplicationPath::value)
+                .filter(it -> !"/".equals(it))
+                .map(it -> it.endsWith("*") ? it.substring(0, it.length() - 1) : it)
+                .orElse("");
     }
 
     private static class TagAnnotation implements Tag {
