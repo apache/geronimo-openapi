@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
@@ -193,11 +194,13 @@ public class HeaderImpl implements Header {
     }
 
     @Override
+    @JsonbProperty("$ref")
     public String getRef() {
         return _ref;
     }
 
     @Override
+    @JsonbProperty("$ref")
     public void setRef(final String _ref) {
         this._ref = _ref;
     }

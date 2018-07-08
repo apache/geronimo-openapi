@@ -590,7 +590,8 @@ public class AnnotationProcessor {
         of(response.ref()).filter(r -> !r.isEmpty()).ifPresent(impl::ref);
         if (response.headers().length > 0) {
             impl.headers(Stream.of(response.headers())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty())
+                                    .orElseGet(() -> it.ref().replace("#/components/headers/", "")),
                             it -> mapHeader(components, it))));
         }
         if (response.content().length > 0) {
@@ -661,7 +662,8 @@ public class AnnotationProcessor {
                 .ifPresent(v -> impl.style(Encoding.Style.valueOf(v)));
         if (e.headers().length > 0) {
             impl.headers(Stream.of(e.headers())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty())
+                                    .orElseGet(() -> it.ref().replace("#/components/headers/", "")),
                             it -> mapHeader(components, it))));
         }
         return impl;
@@ -669,8 +671,20 @@ public class AnnotationProcessor {
 
     private org.eclipse.microprofile.openapi.models.headers.Header mapHeader(
             final org.eclipse.microprofile.openapi.models.Components components, final Header header) {
+        final String ref = header.ref();
+        if (!ref.isEmpty()) {
+            final org.eclipse.microprofile.openapi.models.headers.Header headerRef = findHeaderByRef(components, ref);
+            final HeaderImpl impl = new HeaderImpl();
+            impl.deprecated(headerRef.getDeprecated());
+            impl.description(headerRef.getDescription());
+            impl.allowEmptyValue(headerRef.getAllowEmptyValue());
+            impl.required(headerRef.getRequired());
+            impl.schema(headerRef.getSchema());
+            impl.style(headerRef.getStyle());
+            impl.ref(ref.startsWith("#") ? ref : ("#/components/headers/" + ref));
+            return impl;
+        }
         final HeaderImpl impl = new HeaderImpl();
-        of(header.ref()).filter(s -> !s.isEmpty()).ifPresent(impl::ref);
         impl.deprecated(header.deprecated());
         impl.description(header.description());
         impl.allowEmptyValue(header.allowEmptyValue());
@@ -678,6 +692,14 @@ public class AnnotationProcessor {
         impl.schema(schemaProcessor.mapSchema(components, header.schema()));
         impl.style(org.eclipse.microprofile.openapi.models.headers.Header.Style.SIMPLE);
         return impl;
+    }
+
+    private org.eclipse.microprofile.openapi.models.headers.Header findHeaderByRef(org.eclipse.microprofile.openapi.models.Components components, String ref) {
+        if (ref.startsWith("#/components/headers/")) {
+            return components.getHeaders().get(ref.substring("#/components/headers/".length()));
+        } // else?
+        return ofNullable(components.getHeaders().get(ref))
+                .orElseGet(HeaderImpl::new);
     }
 
     private List<org.eclipse.microprofile.openapi.models.parameters.Parameter> mapParameters(
