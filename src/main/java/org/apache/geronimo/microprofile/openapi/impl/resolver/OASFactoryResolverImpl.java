@@ -16,6 +16,8 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.resolver;
 
+import static java.util.Objects.requireNonNull;
+
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.CallbackImpl;
@@ -87,6 +89,8 @@ public class OASFactoryResolverImpl extends OASFactoryResolver {
 
     @Override
     public <T extends Constructible> T createObject(final Class<T> clazz) {
+        requireNonNull(clazz);
+
         if (APIResponse.class == clazz) {
             return clazz.cast(new APIResponseImpl());
         }
@@ -183,6 +187,6 @@ public class OASFactoryResolverImpl extends OASFactoryResolver {
         if (XML.class == clazz) {
             return clazz.cast(new XMLImpl());
         }
-        return null;
+        throw new IllegalArgumentException("Unsupported: " + clazz);
     }
 }

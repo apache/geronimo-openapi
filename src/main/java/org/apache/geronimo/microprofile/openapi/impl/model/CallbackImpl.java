@@ -60,7 +60,7 @@ public class CallbackImpl extends LinkedHashMap<String, PathItem> implements Cal
 
     @Override
     public void setRef(final String _ref) {
-        this._ref = _ref;
+        this._ref = _ref.startsWith("#") ? _ref : ("#/components/callbacks/" + _ref);
     }
 
     @Override

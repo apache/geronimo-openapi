@@ -183,10 +183,10 @@ public class SchemaProcessor {
         if (schema.minProperties() > 0) {
             impl.maxProperties(schema.maxProperties());
         }
-        if (schema.minItems() > Integer.MIN_VALUE) {
+        if (schema.minItems() < Integer.MAX_VALUE) {
             impl.minItems(schema.minItems());
         }
-        if (schema.minItems() < Integer.MAX_VALUE) {
+        if (schema.maxItems() > Integer.MIN_VALUE) {
             impl.maxItems(schema.maxItems());
         }
         impl.uniqueItems(schema.uniqueItems());

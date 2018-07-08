@@ -72,13 +72,13 @@ public class SchemaImpl implements Schema {
 
     private Integer _maxProperties;
 
-    private java.math.BigDecimal _maximum;
-
     private Integer _minItems;
 
     private Integer _minLength;
 
     private Integer _minProperties;
+
+    private java.math.BigDecimal _maximum;
 
     private java.math.BigDecimal _minimum;
 
@@ -264,11 +264,13 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbProperty("enum")
     public List<Object> getEnumeration() {
         return _enumeration;
     }
 
     @Override
+    @JsonbProperty("enum")
     public void setEnumeration(final List<Object> _enumeration) {
         this._enumeration = _enumeration;
     }
@@ -430,6 +432,7 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.BigDecimalSerializer.class)
     public java.math.BigDecimal getMaximum() {
         return _maximum;
     }
@@ -494,6 +497,7 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.BigDecimalSerializer.class)
     public java.math.BigDecimal getMinimum() {
         return _minimum;
     }
@@ -510,6 +514,7 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.BigDecimalSerializer.class)
     public java.math.BigDecimal getMultipleOf() {
         return _multipleOf;
     }
@@ -642,7 +647,7 @@ public class SchemaImpl implements Schema {
     @Override
     @JsonbProperty("$ref")
     public void setRef(final String _ref) {
-        this._ref = _ref;
+        this._ref = _ref.startsWith("#") ? _ref : ("#/components/schemas/" + _ref);
     }
 
     @Override

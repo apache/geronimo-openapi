@@ -18,6 +18,8 @@ package org.apache.geronimo.microprofile.openapi.impl.model.codec;
 
 import static java.util.Locale.ROOT;
 
+import java.math.BigDecimal;
+
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.adapter.JsonbAdapter;
 
@@ -32,6 +34,22 @@ public final class Serializers {
 
     private Serializers() {
         // no-op
+    }
+
+    @Vetoed // truncate longs/integers at serialization time
+    public static class BigDecimalSerializer implements JsonbAdapter<BigDecimal, Number> {
+        @Override
+        public Number adaptToJson(final BigDecimal obj) {
+            if (obj.remainder(BigDecimal.ONE).compareTo(BigDecimal.ZERO) == 0) {
+                return obj.longValueExact();
+            }
+            return obj;
+        }
+
+        @Override
+        public BigDecimal adaptFromJson(final Number obj) {
+            return BigDecimal.class.isInstance(obj) ? BigDecimal.class.cast(obj) : BigDecimal.valueOf(obj.doubleValue());
+        }
     }
 
     @Vetoed

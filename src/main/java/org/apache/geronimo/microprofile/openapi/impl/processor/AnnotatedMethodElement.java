@@ -20,6 +20,8 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Type;
 
 public interface AnnotatedMethodElement extends AnnotatedElement {
+    String getName();
+
     Type getReturnType();
 
     Class<?> getDeclaringClass();

@@ -93,8 +93,9 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
-    public PathItem DELETE(Operation delete) {
-        return null;
+    public PathItem DELETE(final Operation delete) {
+        setDELETE(delete);
+        return this;
     }
 
     @Override

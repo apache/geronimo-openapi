@@ -17,6 +17,7 @@
 package org.apache.geronimo.microprofile.openapi.cdi;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toSet;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -29,10 +30,12 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import javax.enterprise.event.Observes;
+import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessBean;
@@ -41,31 +44,63 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
 
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
+import org.apache.geronimo.microprofile.openapi.impl.filter.FilterImpl;
 import org.apache.geronimo.microprofile.openapi.impl.loader.DefaultLoader;
+import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedMethodElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedTypeElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
+import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.OASFilter;
 import org.eclipse.microprofile.openapi.OASModelReader;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
 
 public class GeronimoOpenAPIExtension implements Extension {
 
-    private final AnnotationProcessor processor = new AnnotationProcessor();
-
     private final Collection<Bean<?>> endpoints = new ArrayList<>();
 
     private final Map<Application, OpenAPI> openapis = new HashMap<>();
 
-    public <T> void findEndpointsAndApplication(@Observes final ProcessBean<T> event) {
-        if (event.getAnnotated().isAnnotationPresent(Path.class)) {
+    private GeronimoOpenAPIConfig config;
+    private AnnotationProcessor processor;
+    private boolean skipScan;
+    private Collection<String> classes;
+    private Collection<String> packages;
+    private Collection<String> excludePackages;
+    private Collection<String> excludeClasses;
+
+    void init(@Observes final BeforeBeanDiscovery beforeBeanDiscovery) {
+        config = GeronimoOpenAPIConfig.create();
+        processor = new AnnotationProcessor(config);
+        skipScan = Boolean.parseBoolean(config.read(OASConfig.SCAN_DISABLE, "false"));
+        classes = getConfigCollection(OASConfig.SCAN_CLASSES);
+        packages = getConfigCollection(OASConfig.SCAN_PACKAGES);
+        excludePackages = getConfigCollection(OASConfig.SCAN_EXCLUDE_PACKAGES);
+        excludeClasses = getConfigCollection(OASConfig.SCAN_EXCLUDE_CLASSES);
+    }
+
+    <T> void findEndpointsAndApplication(@Observes final ProcessBean<T> event) {
+        final String typeName = event.getAnnotated().getBaseType().getTypeName();
+        if (classes == null && !skipScan && event.getAnnotated().isAnnotationPresent(Path.class) &&
+                !typeName.startsWith("org.apache.geronimo.microprofile.openapi.") &&
+                (packages == null || packages.stream().anyMatch(typeName::startsWith))) {
             endpoints.add(event.getBean());
         }
     }
 
     public OpenAPI getOrCreateOpenAPI(final Application application) {
-        // todo: there are configs for that, todo: handle it
-        if (!application.getSingletons().isEmpty() || !application.getClasses().isEmpty()) {
+        if (classes != null) {
+            final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+            return openapis.computeIfAbsent(application,
+                    app -> createOpenApi(application.getClass(), classes.stream().map(c -> {
+                        try {
+                            return loader.loadClass(c);
+                        } catch (final ClassNotFoundException e) {
+                            throw new IllegalArgumentException(e);
+                        }
+                    })));
+        }
+        if (packages == null && (!application.getSingletons().isEmpty() || !application.getClasses().isEmpty())) {
             return openapis.computeIfAbsent(application,
                     app -> createOpenApi(application.getClass(), Stream.concat(endpoints.stream().map(Bean::getBeanClass),
                             Stream.concat(app.getClasses().stream(), app.getSingletons().stream().map(Object::getClass)))));
@@ -74,47 +109,63 @@ public class GeronimoOpenAPIExtension implements Extension {
                 app -> createOpenApi(application.getClass(), endpoints.stream().map(Bean::getBeanClass)));
     }
 
+    private Collection<String> getConfigCollection(final String key) {
+        return ofNullable(config.read(key, null))
+                .map(vals -> Stream.of(vals.split(",")).map(String::trim).filter(v -> !v.isEmpty()).collect(toSet()))
+                .orElse(null);
+    }
+
     private OpenAPI createOpenApi(final Class<?> application, final Stream<Class<?>> beans) {
         final CDI<Object> current = CDI.current();
-        final GeronimoOpenAPIConfig config = GeronimoOpenAPIConfig.create();
-        final OpenAPI api = ofNullable(config.read("mp.openapi.model.reader", null)).map(value -> newInstance(current, value))
-                .map(it -> OASModelReader.class.cast(it).buildModel()).orElseGet(() -> {
+        final OpenAPI api = ofNullable(config.read(OASConfig.MODEL_READER, null))
+                .map(value -> newInstance(current, value))
+                .map(it -> OASModelReader.class.cast(it).buildModel())
+                .orElseGet(() -> {
                     final BeanManager beanManager = current.getBeanManager();
                     final OpenAPI impl = current.select(DefaultLoader.class).get().loadDefaultApi();
-                    processor.processApplication(impl, new ElementImpl(beanManager.createAnnotatedType(application)));
-
-                    // todo: use servlet to get the servlet mapping which is a valid deployment too
-                    final String base = ofNullable(application.getAnnotation(ApplicationPath.class)).map(ApplicationPath::value)
-                            .filter(it -> !"/".equals(it))
-                            .map(it -> it.endsWith("*") ? it.substring(0, it.length() - 1) : it)
-                            .orElse("");
-                    beans.map(beanManager::createAnnotatedType).forEach(at -> processor.processClass(base, impl, new ElementImpl(at),
-                            at.getMethods().stream().map(MethodElementImpl::new)));
                     return impl;
                 });
 
-        return ofNullable(config.read("mp.openapi.filter", null))
+        final BeanManager beanManager = current.getBeanManager();
+        processor.processApplication(api, new ElementImpl(beanManager.createAnnotatedType(application)));
+        if (skipScan) {
+            return api.paths(new PathsImpl());
+        }
+
+        final String base = getApplicationBinding(application);
+        beans.filter(c -> (excludeClasses == null || !excludeClasses.contains(c.getName())))
+                .filter(c -> (excludePackages == null || excludePackages.stream().noneMatch(it -> c.getName().startsWith(it))))
+                .map(beanManager::createAnnotatedType)
+                .forEach(at -> processor.processClass(
+                        base, api, new ElementImpl(at), at.getMethods().stream().map(MethodElementImpl::new)));
+
+        return ofNullable(config.read(OASConfig.FILTER, null))
                 .map(it -> newInstance(current, it))
-                .map(i -> {
-                    OASFilter.class.cast(i).filterOpenAPI(api);
-                    return api;
-                })
+                .map(i -> new FilterImpl(OASFilter.class.cast(i)).filter(api))
                 .orElse(api);
+    }
+
+    private String getApplicationBinding(final Class<?> application) {
+        // todo: use servlet to get the servlet mapping which is a valid deployment too
+        return ofNullable(application.getAnnotation(ApplicationPath.class)).map(ApplicationPath::value)
+                .filter(it -> !"/".equals(it))
+                .map(it -> it.endsWith("*") ? it.substring(0, it.length() - 1) : it)
+                .orElse("");
     }
 
     private Object newInstance(final CDI<Object> current, final String value) {
         try {
             final Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(value.trim());
             try {
-                return current.select(clazz);
-            } catch (final RuntimeException e) {
-                try {
-                    return clazz.getConstructor().newInstance();
-                } catch (final Exception e1) {
-                    throw e;
+                final Instance<?> instance = current.select(clazz);
+                if (instance.isResolvable()) {
+                    return instance.get();
                 }
+            } catch (final RuntimeException e) {
+                // let do " new"
             }
-        } catch (final ClassNotFoundException e) {
+            return clazz.getConstructor().newInstance();
+        } catch (final Exception e) {
             throw new IllegalArgumentException("Can't load " + value, e);
         }
     }
@@ -126,6 +177,11 @@ public class GeronimoOpenAPIExtension implements Extension {
         private MethodElementImpl(final AnnotatedMethod<?> delegate) {
             super(delegate);
             this.delegate = delegate;
+        }
+
+        @Override
+        public String getName() {
+            return delegate.getJavaMember().getName();
         }
 
         @Override

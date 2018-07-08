@@ -202,7 +202,7 @@ public class HeaderImpl implements Header {
     @Override
     @JsonbProperty("$ref")
     public void setRef(final String _ref) {
-        this._ref = _ref;
+        this._ref = _ref.startsWith("#") ? _ref : ("#/components/headers/" + _ref);
     }
 
     @Override

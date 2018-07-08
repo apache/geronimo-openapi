@@ -254,7 +254,7 @@ public class ParameterImpl implements Parameter {
     @Override
     @JsonbProperty("$ref")
     public void setRef(final String _ref) {
-        this._ref = _ref;
+        this._ref = _ref.startsWith("#") ? _ref : ("#/components/parameters/" + _ref);
     }
 
     @Override

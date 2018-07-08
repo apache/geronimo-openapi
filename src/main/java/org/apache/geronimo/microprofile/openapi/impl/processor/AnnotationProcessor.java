@@ -58,6 +58,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 import org.apache.cxf.jaxrs.ext.PATCH;
+import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.CallbackImpl;
@@ -86,6 +87,7 @@ import org.apache.geronimo.microprofile.openapi.impl.model.ServerImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariableImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariablesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.TagImpl;
+import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.annotations.Components;
 import org.eclipse.microprofile.openapi.annotations.ExternalDocumentation;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
@@ -126,7 +128,12 @@ import org.eclipse.microprofile.openapi.models.security.Scopes;
 
 @Vetoed
 public class AnnotationProcessor {
+    private final GeronimoOpenAPIConfig config;
     private final SchemaProcessor schemaProcessor = new SchemaProcessor();
+
+    public AnnotationProcessor(final GeronimoOpenAPIConfig config) {
+        this.config = config;
+    }
 
     public void processClass(final String basePath, final OpenAPI api, final AnnotatedElement annotatedType,
                              final Stream<AnnotatedMethodElement> methods) {
@@ -180,8 +187,15 @@ public class AnnotationProcessor {
 
     public void processApplication(final OpenAPI api, final AnnotatedElement type) {
         ofNullable(type.getAnnotation(OpenAPIDefinition.class)).ifPresent(def -> processDefinition(api, def));
+
+        final Optional<String> servers = ofNullable(config.read(OASConfig.SERVERS, null));
+        if (servers.isPresent()) {
+            api.servers(mapConfiguredServers(servers.get()));
+        } else {
+            Stream.of(type.getAnnotationsByType(Server.class)).forEach(server -> api.addServer(mapServer(server)));
+        }
+
         Stream.of(type.getAnnotationsByType(Extension.class)).forEach(ext -> api.addExtension(ext.name(), ext.value()));
-        Stream.of(type.getAnnotationsByType(Server.class)).forEach(server -> api.addServer(mapServer(server)));
         Stream.of(type.getAnnotationsByType(ExternalDocumentation.class))
                 .forEach(doc -> api.setExternalDocs(mapExternalDocumentation(doc)));
         Stream.of(type.getAnnotationsByType(Tag.class)).forEach(tag -> api.addTag(mapTag(tag)));
@@ -201,23 +215,49 @@ public class AnnotationProcessor {
                 });
     }
 
+    private List<org.eclipse.microprofile.openapi.models.servers.Server> mapConfiguredServers(final String servers) {
+        return Stream.of(servers.split(","))
+                .map(String::trim)
+                .filter(v -> !v.isEmpty())
+                .map(server -> new ServerImpl().url(server))
+                .collect(toList());
+    }
+
     private Operation buildOperation(final OpenAPI api, final AnnotatedMethodElement m, final AnnotatedElement declaring) {
-        if (ofNullable(m.getAnnotation(org.eclipse.microprofile.openapi.annotations.Operation.class))
-                .map(org.eclipse.microprofile.openapi.annotations.Operation::hidden).orElse(false)) {
+        final Optional<org.eclipse.microprofile.openapi.annotations.Operation> opOpt = ofNullable(m.getAnnotation(org.eclipse.microprofile.openapi.annotations.Operation.class));
+        if (opOpt.map(org.eclipse.microprofile.openapi.annotations.Operation::hidden).orElse(false)) {
             return null;
         }
 
         final Optional<List<String>> produces = findProduces(m);
 
         final OperationImpl operation = new OperationImpl();
+
+        if (opOpt.isPresent()) {
+            final org.eclipse.microprofile.openapi.annotations.Operation op = opOpt.get();
+            operation.operationId(op.operationId());
+            operation.summary(op.summary());
+            operation.deprecated(op.deprecated());
+            operation.description(op.description());
+        } else {
+            operation.operationId(m.getName());
+        }
+
+        final Optional<String> servers = ofNullable(config.read(OASConfig.SERVERS_OPERATION_PREFIX + operation.getOperationId(), null));
+        if (servers.isPresent()) {
+            servers.ifPresent(s -> operation.servers(mapConfiguredServers(s)));
+        } else {
+            ofNullable(ofNullable(findServers(m)).orElseGet(() -> findServers(declaring)))
+                    .ifPresent(it -> operation.servers(Stream.of(it).map(this::mapServer).collect(toList())));
+        }
+
         of(m.getAnnotationsByType(Callback.class)).filter(it -> it.length > 0).ifPresent(cbs -> {
             final Map<String, org.eclipse.microprofile.openapi.models.callbacks.Callback> callbacks = Stream.of(cbs)
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
                             it -> mapCallback(api.getComponents(), it)));
             operation.callbacks(callbacks);
         });
-        ofNullable(ofNullable(findServers(m)).orElseGet(() -> findServers(declaring)))
-                      .ifPresent(it -> operation.servers(Stream.of(it).map(this::mapServer).collect(toList())));
+
         ofNullable(m.getAnnotation(SecurityScheme.class))
                 .ifPresent(s -> api.getComponents().addSecurityScheme(s.ref(), mapSecurityScheme(s)));
         operation.security(of(Stream.concat(
@@ -288,12 +328,6 @@ public class AnnotationProcessor {
                      .forEach(resp -> ofNullable(resp.getContent().remove(""))
                              .ifPresent(updated -> produces.ifPresent(mt -> mt.forEach(type -> resp.getContent().put(type, updated)))));
             operation.responses(responses);
-        });
-        ofNullable(m.getAnnotation(org.eclipse.microprofile.openapi.annotations.Operation.class)).ifPresent(op -> {
-            operation.operationId(op.operationId());
-            operation.summary(op.summary());
-            operation.deprecated(op.deprecated());
-            operation.description(op.description());
         });
         operation.parameters(Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameter.class) || hasJaxRsParams(it))
@@ -375,7 +409,12 @@ public class AnnotationProcessor {
     }
 
     private PathItem getPathItem(final OpenAPI api, final String path) {
-        return api.getPaths().computeIfAbsent(path, p -> new PathItemImpl());
+        return api.getPaths().computeIfAbsent(path, p -> {
+            final PathItemImpl item = new PathItemImpl();
+            ofNullable(config.read(OASConfig.SERVERS_PATH_PREFIX + path, null))
+                    .ifPresent(servers -> item.servers(mapConfiguredServers(servers)));
+            return item;
+        });
     }
 
     private String buildPath(final String base, final Path path, final Path mtdPath) {
@@ -721,12 +760,14 @@ public class AnnotationProcessor {
                 .orElse(null));
         impl.allowEmptyValue(parameter.allowEmptyValue());
         impl.allowReserved(parameter.allowReserved());
-        impl.schema(ofNullable(schemaProcessor.mapSchema(components, parameter.schema())).orElseGet(() -> {
-            if (annotatedElement == null) {
-                return null;
-            }
-            return schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType());
-        }));
+        impl.schema(ofNullable(schemaProcessor.mapSchema(components, parameter.schema()))
+                .map(s -> s.externalDocs(mapExternalDocumentation(parameter.schema().externalDocs())))
+                .orElseGet(() -> {
+                    if (annotatedElement == null) {
+                        return null;
+                    }
+                    return schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType());
+                }));
         if (impl.getSchema() != null && impl.getSchema().getType() == null && annotatedElement != null) {
             schemaProcessor.fillSchema(components, annotatedElement.getType(), impl.getSchema());
         }
@@ -827,7 +868,7 @@ public class AnnotationProcessor {
         if (tags.length == 0) {
             return;
         }
-        api.tags(Stream.of(tags).map(this::mapTag).collect(toList()));
+        Stream.of(tags).map(this::mapTag).forEach(api::addTag);
     }
 
     private org.eclipse.microprofile.openapi.models.tags.Tag mapTag(final Tag tag) {

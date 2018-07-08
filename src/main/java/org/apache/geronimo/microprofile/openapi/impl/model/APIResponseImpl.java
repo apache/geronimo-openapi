@@ -144,7 +144,7 @@ public class APIResponseImpl implements APIResponse {
 
     @Override
     public void setRef(final String _ref) {
-        this._ref = _ref;
+        this._ref = _ref.startsWith("#") ? _ref : ("#/components/responses/" + _ref);
     }
 
     @Override
