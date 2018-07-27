@@ -73,6 +73,7 @@
       <artifactId>cxf-integration-cdi</artifactId>
     </dependency>
     <!-- not that consistent with microprofile so don't enforce it -->
+    
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-yaml</artifactId>
@@ -85,7 +86,6 @@
     <dependency>
       <groupId>javax.activation</groupId>
       <artifactId>javax.activation-api</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <dependency>
