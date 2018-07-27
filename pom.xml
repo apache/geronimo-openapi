@@ -50,6 +50,7 @@
     <arquillian.version>1.1.14.Final</arquillian.version>
     <testng.version>6.9.9</testng.version>
     <jackson.version>2.9.4</jackson.version>
+    <javax.activation.version>1.2.0</javax.activation.version>
   </properties>
 
   <dependencyManagement>
@@ -167,6 +168,13 @@
         <version>${jackson.version}</version>
         <scope>provided</scope>
         <optional>true</optional>
+      </dependency>
+
+      <dependency>
+        <groupId>javax.activation</groupId>
+        <artifactId>javax.activation-api</artifactId>
+        <version>${javax.activation.version}</version>
+        <scope>runtime</scope>
       </dependency>
 
       <dependency>
