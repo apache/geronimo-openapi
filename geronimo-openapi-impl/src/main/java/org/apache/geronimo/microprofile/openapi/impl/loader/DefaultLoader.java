@@ -28,7 +28,6 @@ import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.servlet.ServletContext;
 
-import org.apache.geronimo.microprofile.openapi.impl.loader.yaml.Yaml;
 import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
 
@@ -52,6 +51,10 @@ public class DefaultLoader {
                 .orElseGet(() -> Stream.of("", "/").map(prefix -> prefix + "META-INF/openapi.")
                         .flatMap(p -> Stream.of(p + "yaml", p + "yml"))
                         .map(it -> ofNullable(loader.getResourceAsStream(it)).orElseGet(() -> context.getResourceAsStream(it)))
-                        .filter(Objects::nonNull).findFirst().map(Yaml::loadAPI).orElseGet(OpenAPIImpl::new));
+                        .filter(Objects::nonNull).findFirst().map(this::loadFromYaml).orElseGet(OpenAPIImpl::new));
+    }
+
+    private OpenAPI loadFromYaml(final InputStream inputStream) {
+        return org.apache.geronimo.microprofile.openapi.impl.loader.yaml.Yaml.loadAPI(inputStream);
     }
 }
