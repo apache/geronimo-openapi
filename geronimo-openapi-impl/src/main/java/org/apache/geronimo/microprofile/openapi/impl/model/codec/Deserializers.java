@@ -58,27 +58,6 @@ public final class Deserializers {
         };
     }
 
-    private static Type listType(final Class<?> value) {
-        final Type[] args = new Type[] { value };
-        return new ParameterizedType() {
-
-            @Override
-            public Type[] getActualTypeArguments() {
-                return args;
-            }
-
-            @Override
-            public Type getRawType() {
-                return Map.class;
-            }
-
-            @Override
-            public Type getOwnerType() {
-                return null;
-            };
-        };
-    }
-
     @Vetoed
     public static class MapHeadersDeserializer extends BaseDeserializer<Map<String, Header>> {
         public MapHeadersDeserializer() {

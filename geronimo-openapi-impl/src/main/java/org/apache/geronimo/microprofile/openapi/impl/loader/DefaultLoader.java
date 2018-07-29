@@ -36,7 +36,6 @@ public class DefaultLoader {
     @Inject
     private ServletContext context;
 
-    // todo: finish binding
     public OpenAPI loadDefaultApi() {
         final ClassLoader loader = Thread.currentThread().getContextClassLoader();
         return Stream.of("", "/").map(prefix -> prefix + "META-INF/openapi.json")
