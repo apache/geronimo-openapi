@@ -348,7 +348,9 @@ public class AnnotationProcessor {
                         (!p.isAnnotationPresent(Suspended.class) && !p.isAnnotationPresent(Context.class) &&
                                 !p.isAnnotationPresent(Parameter.class) && !hasJaxRsParams(p)))
                 .findFirst()
-                .ifPresent(p -> operation.requestBody(mapRequestBody(api.getComponents(), ofNullable(p.getAnnotation(RequestBody.class))
+                .ifPresent(p -> operation.requestBody(mapRequestBody(
+                        produces.filter(it -> !it.isEmpty()).map(it -> it.iterator().next()).orElse(null), p,
+                        api.getComponents(), ofNullable(p.getAnnotation(RequestBody.class))
                     .orElseGet(() -> m.getAnnotation(RequestBody.class)))));
         return operation;
     }
@@ -451,7 +453,7 @@ public class AnnotationProcessor {
         if (components.requestBodies().length > 0) {
             impl.requestBodies(Stream.of(components.requestBodies())
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapRequestBody(impl, it))));
+                            it -> mapRequestBody(null, null, impl, it))));
         }
         if (components.parameters().length > 0) {
             impl.parameters(Stream.of(components.parameters())
@@ -587,7 +589,7 @@ public class AnnotationProcessor {
                 if (co.parameters().length > 0) {
                     operation.parameters(mapParameters(components, co.parameters()));
                 }
-                operation.requestBody(mapRequestBody(components, co.requestBody()));
+                operation.requestBody(mapRequestBody(null, null, components, co.requestBody()));
                 if (co.security().length > 0) {
                     operation.security(Stream.of(co.security()).map(this::mapSecurity).collect(toList()));
                 }
@@ -674,7 +676,9 @@ public class AnnotationProcessor {
     }
 
     private org.eclipse.microprofile.openapi.models.parameters.RequestBody mapRequestBody(
-            final org.eclipse.microprofile.openapi.models.Components components, final RequestBody requestBody) {
+            final String defaultContentType, final AnnotatedTypeElement param,
+            final org.eclipse.microprofile.openapi.models.Components components,
+            final RequestBody requestBody) {
 
         final org.eclipse.microprofile.openapi.models.parameters.RequestBody impl = new RequestBodyImpl()
                 .content(new ContentImpl());
@@ -689,6 +693,12 @@ public class AnnotationProcessor {
             impl.getContent().putAll(Stream.of(requestBody.content()).collect(toMap(
                     it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse("*/*"),
                     it -> mapContent(components, it))));
+        } else if (param != null && defaultContentType != null) {
+            impl.required(true);
+        }
+        if (impl.getContent().isEmpty() && param != null && defaultContentType != null) {
+            impl.getContent().put(defaultContentType, new MediaTypeImpl()
+                    .schema(schemaProcessor.mapSchemaFromClass(components, param.getType())));
         }
         return impl;
     }

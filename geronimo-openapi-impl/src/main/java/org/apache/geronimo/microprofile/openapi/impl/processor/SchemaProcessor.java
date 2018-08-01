@@ -87,12 +87,18 @@ public class SchemaProcessor {
             }
         } else {
             schema.items(new SchemaImpl());
-            schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
             if (ParameterizedType.class.isInstance(model)) {
                 final ParameterizedType pt = ParameterizedType.class.cast(model);
-                if (pt.getActualTypeArguments().length == 1 && Class.class.isInstance(pt.getActualTypeArguments()[0])) {
+                if (Class.class.isInstance(pt.getRawType()) && Map.class.isAssignableFrom(Class.class.cast(pt.getRawType()))) {
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
+                } else if (pt.getActualTypeArguments().length == 1 && Class.class.isInstance(pt.getActualTypeArguments()[0])) {
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
                     fillSchema(components, Class.class.cast(pt.getActualTypeArguments()[0]), schema.getItems());
+                } else {
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
                 }
+            } else { // todo?
+                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
             }
         }
     }
