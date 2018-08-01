@@ -58,7 +58,6 @@ public class SchemaProcessor {
 
     public void fillSchema(final org.eclipse.microprofile.openapi.models.Components components, final Type model,
             final org.eclipse.microprofile.openapi.models.media.Schema schema) {
-        schema.items(new SchemaImpl());
         if (Class.class.isInstance(model)) {
             if (boolean.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN);
@@ -72,6 +71,7 @@ public class SchemaProcessor {
                 // todo cache schema in components and just set the ref here - jsonb mapping based
                 final Class from = Class.class.cast(model);
                 ofNullable(from.getAnnotation(Schema.class)).ifPresent(s -> sets(components, Schema.class.cast(s), schema));
+                schema.items(new SchemaImpl());
                 schema.properties(new HashMap<>());
                 Class<?> current = from;
                 while (current != null && current != Object.class) {
@@ -86,11 +86,11 @@ public class SchemaProcessor {
                 }
             }
         } else {
+            schema.items(new SchemaImpl());
             schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
             if (ParameterizedType.class.isInstance(model)) {
                 final ParameterizedType pt = ParameterizedType.class.cast(model);
                 if (pt.getActualTypeArguments().length == 1 && Class.class.isInstance(pt.getActualTypeArguments()[0])) {
-                    schema.items(new SchemaImpl());
                     fillSchema(components, Class.class.cast(pt.getActualTypeArguments()[0]), schema.getItems());
                 }
             }

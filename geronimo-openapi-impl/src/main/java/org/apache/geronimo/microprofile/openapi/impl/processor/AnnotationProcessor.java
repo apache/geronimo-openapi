@@ -236,10 +236,18 @@ public class AnnotationProcessor {
 
         if (opOpt.isPresent()) {
             final org.eclipse.microprofile.openapi.annotations.Operation op = opOpt.get();
-            operation.operationId(op.operationId());
-            operation.summary(op.summary());
+            if (!op.operationId().isEmpty()) {
+                operation.operationId(op.operationId());
+            } else {
+                operation.operationId(m.getName());
+            }
+            if (!op.summary().isEmpty()) {
+                operation.summary(op.summary());
+            }
             operation.deprecated(op.deprecated());
-            operation.description(op.description());
+            if (!op.description().isEmpty()) {
+                operation.description(op.description());
+            }
         } else {
             operation.operationId(m.getName());
         }
@@ -336,7 +344,9 @@ public class AnnotationProcessor {
                         .orElseGet(() -> new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(api.getComponents(), it.getType()))))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
-                .filter(p -> p.isAnnotationPresent(RequestBody.class) || (!p.isAnnotationPresent(Suspended.class) && !p.isAnnotationPresent(Context.class)))
+                .filter(p -> p.isAnnotationPresent(RequestBody.class) ||
+                        (!p.isAnnotationPresent(Suspended.class) && !p.isAnnotationPresent(Context.class) &&
+                                !p.isAnnotationPresent(Parameter.class) && !hasJaxRsParams(p)))
                 .findFirst()
                 .ifPresent(p -> operation.requestBody(mapRequestBody(api.getComponents(), ofNullable(p.getAnnotation(RequestBody.class))
                     .orElseGet(() -> m.getAnnotation(RequestBody.class)))));
@@ -669,8 +679,12 @@ public class AnnotationProcessor {
         final org.eclipse.microprofile.openapi.models.parameters.RequestBody impl = new RequestBodyImpl()
                 .content(new ContentImpl());
         if (requestBody != null) {
-            impl.description(requestBody.description());
-            impl.ref(requestBody.ref());
+            if (!requestBody.description().isEmpty()) {
+                impl.description(requestBody.description());
+            }
+            if (!requestBody.ref().isEmpty()) {
+                impl.ref(requestBody.ref());
+            }
             impl.required(requestBody.required());
             impl.getContent().putAll(Stream.of(requestBody.content()).collect(toMap(
                     it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse("*/*"),
@@ -805,10 +819,18 @@ public class AnnotationProcessor {
 
     private Example mapExample(final ExampleObject exampleObject) {
         final ExampleImpl impl = new ExampleImpl();
-        impl.description(exampleObject.description());
-        impl.externalValue(exampleObject.externalValue());
-        impl.value(exampleObject.value());
-        impl.summary(exampleObject.summary());
+        if (!exampleObject.description().isEmpty()) {
+            impl.description(exampleObject.description());
+        }
+        if (!exampleObject.externalValue().isEmpty()) {
+            impl.externalValue(exampleObject.externalValue());
+        }
+        if (!exampleObject.value().isEmpty()) { // todo: type
+            impl.value(exampleObject.value());
+        }
+        if (!exampleObject.summary().isEmpty()) {
+            impl.summary(exampleObject.summary());
+        }
         return impl;
     }
 
@@ -882,9 +904,16 @@ public class AnnotationProcessor {
 
     private org.eclipse.microprofile.openapi.models.ExternalDocumentation mapExternalDocumentation(
             final ExternalDocumentation externalDocumentation) {
+        if (externalDocumentation.url().isEmpty() && externalDocumentation.description().isEmpty()) {
+            return null;
+        }
         final ExternalDocumentationImpl impl = new ExternalDocumentationImpl();
-        impl.url(externalDocumentation.url());
-        impl.description(externalDocumentation.description());
+        if (!externalDocumentation.url().isEmpty()) {
+            impl.url(externalDocumentation.url());
+        }
+        if (!externalDocumentation.description().isEmpty()) {
+            impl.description(externalDocumentation.description());
+        }
         return impl;
     }
 

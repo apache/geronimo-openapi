@@ -156,7 +156,27 @@ public class OpenAPIMojo extends AbstractMojo {
         @Override
         public AnnotatedTypeElement[] getParameters() {
             return Stream.of(delegate.getParameters())
-                    .map(p -> new ClassElement(p.getType()))
+                    .map(p -> new AnnotatedTypeElement() {
+                        @Override
+                        public Type getType() {
+                            return p.getParameterizedType();
+                        }
+
+                        @Override
+                        public <T extends Annotation> T getAnnotation(final Class<T> annotationClass) {
+                            return p.getAnnotation(annotationClass);
+                        }
+
+                        @Override
+                        public Annotation[] getAnnotations() {
+                            return p.getAnnotations();
+                        }
+
+                        @Override
+                        public Annotation[] getDeclaredAnnotations() {
+                            return p.getDeclaredAnnotations();
+                        }
+                    })
                     .toArray(AnnotatedTypeElement[]::new);
         }
 
