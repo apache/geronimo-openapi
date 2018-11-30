@@ -18,6 +18,7 @@ package org.apache.geronimo.microprofile.openapi.cdi;
 
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toSet;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -31,6 +32,7 @@ import java.util.stream.Stream;
 
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.spi.AfterDeploymentValidation;
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.Bean;
@@ -38,17 +40,22 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
+import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessBean;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
+import javax.ws.rs.core.MediaType;
 
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.filter.FilterImpl;
 import org.apache.geronimo.microprofile.openapi.impl.loader.DefaultLoader;
+import org.apache.geronimo.microprofile.openapi.impl.loader.yaml.Yaml;
 import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedMethodElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedTypeElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
+import org.apache.geronimo.microprofile.openapi.jaxrs.JacksonOpenAPIYamlBodyWriter;
+import org.apache.geronimo.microprofile.openapi.jaxrs.OpenAPIFilter;
 import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.OASFilter;
 import org.eclipse.microprofile.openapi.OASModelReader;
@@ -67,6 +74,7 @@ public class GeronimoOpenAPIExtension implements Extension {
     private Collection<String> packages;
     private Collection<String> excludePackages;
     private Collection<String> excludeClasses;
+    private boolean jacksonIsPresent;
 
     void init(@Observes final BeforeBeanDiscovery beforeBeanDiscovery) {
         config = GeronimoOpenAPIConfig.create();
@@ -76,6 +84,18 @@ public class GeronimoOpenAPIExtension implements Extension {
         packages = getConfigCollection(OASConfig.SCAN_PACKAGES);
         excludePackages = getConfigCollection(OASConfig.SCAN_EXCLUDE_PACKAGES);
         excludeClasses = getConfigCollection(OASConfig.SCAN_EXCLUDE_CLASSES);
+        try {
+            Yaml.getObjectMapper();
+            jacksonIsPresent = true;
+        } catch (final Error | RuntimeException e) {
+            // no-op
+        }
+    }
+
+    void vetoJacksonIfNotHere(@Observes final ProcessAnnotatedType<JacksonOpenAPIYamlBodyWriter> event) {
+        if (!jacksonIsPresent) {
+            event.veto();
+        }
     }
 
     <T> void findEndpointsAndApplication(@Observes final ProcessBean<T> event) {
@@ -85,6 +105,14 @@ public class GeronimoOpenAPIExtension implements Extension {
                 (packages == null || packages.stream().anyMatch(typeName::startsWith))) {
             endpoints.add(event.getBean());
         }
+    }
+
+    void afterValidation(@Observes final AfterDeploymentValidation validation,
+                         final BeanManager beanManager) {
+        final OpenAPIFilter filter = OpenAPIFilter.class.cast(
+                beanManager.getReference(beanManager.resolve(beanManager.getBeans(OpenAPIFilter.class)),
+                        OpenAPIFilter.class, beanManager.createCreationalContext(null)));
+        filter.setDefaultMediaType(jacksonIsPresent ? new MediaType("text", "vnd.yaml") : APPLICATION_JSON_TYPE);
     }
 
     public OpenAPI getOrCreateOpenAPI(final Application application) {

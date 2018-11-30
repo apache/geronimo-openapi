@@ -16,11 +16,15 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.loader.yaml;
 
+import static java.util.Optional.ofNullable;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbTransient;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
@@ -92,15 +96,21 @@ import org.eclipse.microprofile.openapi.models.servers.ServerVariable;
 import org.eclipse.microprofile.openapi.models.servers.ServerVariables;
 import org.eclipse.microprofile.openapi.models.tags.Tag;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyName;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.module.SimpleAbstractTypeResolver;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.NumberSerializer;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 @Vetoed
@@ -111,86 +121,146 @@ public final class Yaml {
 
     public static OpenAPI loadAPI(final InputStream stream) {
         try {
-            final SimpleAbstractTypeResolver resolver = new SimpleAbstractTypeResolver();
-            resolver.addMapping(APIResponse.class, APIResponseImpl.class);
-            resolver.addMapping(APIResponses.class, APIResponsesImpl.class);
-            resolver.addMapping(Callback.class, CallbackImpl.class);
-            resolver.addMapping(Components.class, ComponentsImpl.class);
-            resolver.addMapping(Contact.class, ContactImpl.class);
-            resolver.addMapping(Content.class, ContentImpl.class);
-            resolver.addMapping(Discriminator.class, DiscriminatorImpl.class);
-            resolver.addMapping(Encoding.class, EncodingImpl.class);
-            resolver.addMapping(Example.class, ExampleImpl.class);
-            resolver.addMapping(Extensible.class, ExtensibleImpl.class);
-            resolver.addMapping(ExternalDocumentation.class, ExternalDocumentationImpl.class);
-            resolver.addMapping(Header.class, HeaderImpl.class);
-            resolver.addMapping(Info.class, InfoImpl.class);
-            resolver.addMapping(License.class, LicenseImpl.class);
-            resolver.addMapping(Link.class, LinkImpl.class);
-            resolver.addMapping(MediaType.class, MediaTypeImpl.class);
-            resolver.addMapping(OAuthFlow.class, OAuthFlowImpl.class);
-            resolver.addMapping(OAuthFlows.class, OAuthFlowsImpl.class);
-            resolver.addMapping(OpenAPI.class, OpenAPIImpl.class);
-            resolver.addMapping(Operation.class, OperationImpl.class);
-            resolver.addMapping(Parameter.class, ParameterImpl.class);
-            resolver.addMapping(PathItem.class, PathItemImpl.class);
-            resolver.addMapping(Paths.class, PathsImpl.class);
-            resolver.addMapping(Reference.class, ReferenceImpl.class);
-            resolver.addMapping(RequestBody.class, RequestBodyImpl.class);
-            resolver.addMapping(Schema.class, SchemaImpl.class);
-            resolver.addMapping(Scopes.class, ScopesImpl.class);
-            resolver.addMapping(SecurityRequirement.class, SecurityRequirementImpl.class);
-            resolver.addMapping(SecurityScheme.class, SecuritySchemeImpl.class);
-            resolver.addMapping(Server.class, ServerImpl.class);
-            resolver.addMapping(ServerVariable.class, ServerVariableImpl.class);
-            resolver.addMapping(ServerVariables.class, ServerVariablesImpl.class);
-            resolver.addMapping(Tag.class, TagImpl.class);
-            resolver.addMapping(XML.class, XMLImpl.class);
-
-            final SimpleModule module = new SimpleModule();
-            module.setAbstractTypes(resolver);
-            module.addDeserializer(Parameter.In.class, new JsonDeserializer<Parameter.In>() {
-                @Override
-                public Parameter.In deserialize(final JsonParser p, final DeserializationContext ctxt) {
-                    return Stream.of(Parameter.In.values()).filter(it -> {
-                        try {
-                            return it.name().equalsIgnoreCase(p.getValueAsString());
-                        } catch (IOException e) {
-                            throw new IllegalArgumentException(e);
-                        }
-                    }).findFirst().orElseThrow(() -> new IllegalArgumentException("No matching In value"));
-                }
-            });
-            module.addDeserializer(Schema.SchemaType.class, new JsonDeserializer<Schema.SchemaType>() {
-                @Override
-                public Schema.SchemaType deserialize(final JsonParser p, final DeserializationContext ctxt) {
-                    return Stream.of(Schema.SchemaType.values()).filter(it -> {
-                        try {
-                            return it.name().equalsIgnoreCase(p.getValueAsString());
-                        } catch (IOException e) {
-                            throw new IllegalArgumentException(e);
-                        }
-                    }).findFirst().orElseThrow(() -> new IllegalArgumentException("No matching SchemaType value"));
-                }
-            });
-
-            final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-            mapper.registerModule(module);
-            mapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
-                @Override
-                protected boolean _isIgnorable(final Annotated a) {
-                    return super._isIgnorable(a) || a.getAnnotation(JsonbTransient.class) != null;
-                }
-            });
-            mapper.setPropertyNamingStrategy(new PropertyNamingStrategy.PropertyNamingStrategyBase() {
-                @Override
-                public String translate(final String propertyName) {
-                    return "ref".equals(propertyName) ? "$ref" : propertyName;
-                }
-            });
+            final ObjectMapper mapper = getObjectMapper();
             return mapper.readValue(stream, OpenAPI.class);
         } catch (final IOException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    // let be reusable in integrations
+    public static ObjectMapper getObjectMapper() {
+        final SimpleAbstractTypeResolver resolver = new SimpleAbstractTypeResolver();
+        resolver.addMapping(APIResponse.class, APIResponseImpl.class);
+        resolver.addMapping(APIResponses.class, APIResponsesImpl.class);
+        resolver.addMapping(Callback.class, CallbackImpl.class);
+        resolver.addMapping(Components.class, ComponentsImpl.class);
+        resolver.addMapping(Contact.class, ContactImpl.class);
+        resolver.addMapping(Content.class, ContentImpl.class);
+        resolver.addMapping(Discriminator.class, DiscriminatorImpl.class);
+        resolver.addMapping(Encoding.class, EncodingImpl.class);
+        resolver.addMapping(Example.class, ExampleImpl.class);
+        resolver.addMapping(Extensible.class, ExtensibleImpl.class);
+        resolver.addMapping(ExternalDocumentation.class, ExternalDocumentationImpl.class);
+        resolver.addMapping(Header.class, HeaderImpl.class);
+        resolver.addMapping(Info.class, InfoImpl.class);
+        resolver.addMapping(License.class, LicenseImpl.class);
+        resolver.addMapping(Link.class, LinkImpl.class);
+        resolver.addMapping(MediaType.class, MediaTypeImpl.class);
+        resolver.addMapping(OAuthFlow.class, OAuthFlowImpl.class);
+        resolver.addMapping(OAuthFlows.class, OAuthFlowsImpl.class);
+        resolver.addMapping(OpenAPI.class, OpenAPIImpl.class);
+        resolver.addMapping(Operation.class, OperationImpl.class);
+        resolver.addMapping(Parameter.class, ParameterImpl.class);
+        resolver.addMapping(PathItem.class, PathItemImpl.class);
+        resolver.addMapping(Paths.class, PathsImpl.class);
+        resolver.addMapping(Reference.class, ReferenceImpl.class);
+        resolver.addMapping(RequestBody.class, RequestBodyImpl.class);
+        resolver.addMapping(Schema.class, SchemaImpl.class);
+        resolver.addMapping(Scopes.class, ScopesImpl.class);
+        resolver.addMapping(SecurityRequirement.class, SecurityRequirementImpl.class);
+        resolver.addMapping(SecurityScheme.class, SecuritySchemeImpl.class);
+        resolver.addMapping(Server.class, ServerImpl.class);
+        resolver.addMapping(ServerVariable.class, ServerVariableImpl.class);
+        resolver.addMapping(ServerVariables.class, ServerVariablesImpl.class);
+        resolver.addMapping(Tag.class, TagImpl.class);
+        resolver.addMapping(XML.class, XMLImpl.class);
+
+        final SimpleModule module = new SimpleModule();
+        module.setAbstractTypes(resolver);
+        module.addDeserializer(Parameter.In.class, new JsonDeserializer<Parameter.In>() {
+            @Override
+            public Parameter.In deserialize(final JsonParser p, final DeserializationContext ctxt) {
+                return Stream.of(Parameter.In.values()).filter(it -> {
+                    try {
+                        return it.name().equalsIgnoreCase(p.getValueAsString());
+                    } catch (IOException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                }).findFirst().orElseThrow(() -> new IllegalArgumentException("No matching In value"));
+            }
+        });
+        module.addDeserializer(Schema.SchemaType.class, new JsonDeserializer<Schema.SchemaType>() {
+            @Override
+            public Schema.SchemaType deserialize(final JsonParser p, final DeserializationContext ctxt) {
+                return Stream.of(Schema.SchemaType.values()).filter(it -> {
+                    try {
+                        return it.name().equalsIgnoreCase(p.getValueAsString());
+                    } catch (IOException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                }).findFirst().orElseThrow(() -> new IllegalArgumentException("No matching SchemaType value"));
+            }
+        });
+        module.addDeserializer(SecurityScheme.Type.class, new JsonDeserializer<SecurityScheme.Type>() {
+            @Override
+            public SecurityScheme.Type deserialize(final JsonParser p, final DeserializationContext ctxt) {
+                return Stream.of(SecurityScheme.Type.values()).filter(it -> {
+                    try {
+                        return it.name().equalsIgnoreCase(p.getValueAsString());
+                    } catch (IOException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                }).findFirst().orElseThrow(() -> new IllegalArgumentException("No matching SecurityScheme.Type value"));
+            }
+        });
+        module.addSerializer(BigDecimal.class, new NumberSerializer(BigDecimal.class) {
+            @Override
+            public void serialize(final Number value, final JsonGenerator g,
+                                  final SerializerProvider provider) throws IOException {
+                if (BigDecimal.class.isInstance(value) && value.doubleValue() == value.longValue()) {
+                    super.serialize(value.longValue(), g, provider);
+                } else {
+                    super.serialize(value, g, provider);
+                }
+            }
+        });
+        Stream.of(SecurityScheme.Type.class, SecurityScheme.In.class,
+                Schema.SchemaType.class, Header.Style.class, Encoding.Style.class,
+                Parameter.Style.class, Parameter.In.class)
+              .forEach(it -> toStringSerializer(module, it));
+
+        final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.registerModule(module);
+        mapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
+            @Override
+            protected boolean _isIgnorable(final Annotated a) {
+                return super._isIgnorable(a) || a.getAnnotation(JsonbTransient.class) != null;
+            }
+
+            @Override
+            public PropertyName findNameForSerialization(final Annotated a) {
+                return ofNullable(a.getAnnotation(JsonbProperty.class))
+                        .map(JsonbProperty::value)
+                        .map(PropertyName::new)
+                        .orElseGet(() -> super.findNameForSerialization(a));
+            }
+
+            @Override
+            public PropertyName findNameForDeserialization(final Annotated a) {
+                return ofNullable(a.getAnnotation(JsonbProperty.class))
+                        .map(JsonbProperty::value)
+                        .map(PropertyName::new)
+                        .orElseGet(() -> super.findNameForDeserialization(a));
+            }
+        });
+        mapper.setPropertyNamingStrategy(new PropertyNamingStrategy.PropertyNamingStrategyBase() {
+            @Override
+            public String translate(final String propertyName) {
+                return "ref".equals(propertyName) ? "$ref" : propertyName;
+            }
+        });
+        return mapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+    }
+
+    private static <T> void toStringSerializer(final SimpleModule module, final Class<T> it) {
+        module.addSerializer(it, new JsonSerializer<T>() {
+            @Override
+            public void serialize(final T value,
+                                  final JsonGenerator gen,
+                                  final SerializerProvider serializers) throws IOException {
+                gen.writeString(value.toString());
+            }
+        });
     }
 }

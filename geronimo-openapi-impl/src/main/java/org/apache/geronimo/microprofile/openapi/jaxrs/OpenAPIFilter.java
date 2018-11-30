@@ -16,9 +16,11 @@
  */
 package org.apache.geronimo.microprofile.openapi.jaxrs;
 
-import static java.util.Optional.ofNullable;
 import static javax.ws.rs.Priorities.USER;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static javax.ws.rs.core.MediaType.WILDCARD_TYPE;
+
+import java.util.List;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.ApplicationScoped;
@@ -29,6 +31,7 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 
@@ -47,6 +50,7 @@ public class OpenAPIFilter implements ContainerRequestFilter {
     private GeronimoOpenAPIExtension extension;
 
     private OpenAPI openApi;
+    private MediaType defaultMediaType;
 
     @Override
     public void filter(final ContainerRequestContext rc) {
@@ -55,15 +59,33 @@ public class OpenAPIFilter implements ContainerRequestFilter {
         }
         final String path = rc.getUriInfo().getPath();
         if ("openapi".equals(path)) {
-            rc.abortWith(Response.ok(openApi).type(ofNullable(rc.getMediaType()).orElse(APPLICATION_JSON_TYPE)).build());
+            final List<MediaType> mediaTypes = rc.getAcceptableMediaTypes();
+            rc.abortWith(Response.ok(openApi).type(selectType(mediaTypes)).build());
         }
         if ("openapi.json".equals(path)) {
             rc.abortWith(Response.ok(openApi).type(APPLICATION_JSON_TYPE).build());
         }
+        if ("openapi.yml".equals(path) || "openapi.yaml".equals(path)) {
+            rc.abortWith(Response.ok(openApi).type("text/vnd.yaml").build());
+        }
+    }
+
+    private MediaType selectType(final List<MediaType> mediaTypes) {
+        if (mediaTypes.contains(APPLICATION_JSON_TYPE)) {
+            return APPLICATION_JSON_TYPE;
+        }
+        if (mediaTypes.isEmpty()) {
+            return defaultMediaType;
+        }
+        return mediaTypes.stream().filter(it -> !WILDCARD_TYPE.equals(it)).findFirst().orElse(defaultMediaType);
     }
 
     @Context
     public void setApplication(final Application application) {
         this.openApi = extension.getOrCreateOpenAPI(application);
+    }
+
+    public void setDefaultMediaType(final MediaType defaultMediaType) {
+        this.defaultMediaType = defaultMediaType;
     }
 }
