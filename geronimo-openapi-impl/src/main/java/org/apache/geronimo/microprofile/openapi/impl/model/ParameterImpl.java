@@ -219,6 +219,7 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.InSerializer.class)
     public void setIn(final In _in) {
         this._in = _in;
     }
@@ -302,6 +303,7 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.ParameterStyleSerializer.class)
     public void setStyle(final Style _style) {
         this._style = _style;
     }

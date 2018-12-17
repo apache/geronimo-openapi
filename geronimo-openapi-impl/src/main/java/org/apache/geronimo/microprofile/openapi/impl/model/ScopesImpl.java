@@ -49,4 +49,8 @@ public class ScopesImpl extends LinkedHashMap<String, String> implements Scopes 
         this.put(name, item);
         return this;
     }
+
+    public Scopes addString(final String name, final String item) {
+        return addScope(name, item);
+    }
 }

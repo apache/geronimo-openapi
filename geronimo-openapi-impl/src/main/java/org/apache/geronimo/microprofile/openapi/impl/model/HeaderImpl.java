@@ -250,6 +250,7 @@ public class HeaderImpl implements Header {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.HeaderStyleSerializer.class)
     public void setStyle(final Style _style) {
         this._style = _style;
     }

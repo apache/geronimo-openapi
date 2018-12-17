@@ -120,6 +120,7 @@ public class SecuritySchemeImpl implements SecurityScheme {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.SecuritySchemeInSerializer.class)
     public void setIn(final In _in) {
         this._in = _in;
     }
@@ -203,6 +204,7 @@ public class SecuritySchemeImpl implements SecurityScheme {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.SecuritySchemeTypeSerializer.class)
     public void setType(final Type _type) {
         this._type = _type;
     }

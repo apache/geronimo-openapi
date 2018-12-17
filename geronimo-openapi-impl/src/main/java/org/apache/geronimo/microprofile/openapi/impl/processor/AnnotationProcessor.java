@@ -352,6 +352,21 @@ public class AnnotationProcessor {
                         produces.filter(it -> !it.isEmpty()).map(it -> it.iterator().next()).orElse(null), p,
                         api.getComponents(), ofNullable(p.getAnnotation(RequestBody.class))
                     .orElseGet(() -> m.getAnnotation(RequestBody.class)))));
+        if (operation.getResponses() == null) {
+            final APIResponsesImpl responses = new APIResponsesImpl();
+            operation.responses(responses);
+            final boolean normalResponse = Stream.of(m.getParameters()).noneMatch(it -> it.isAnnotationPresent(Suspended.class));
+            final ContentImpl content = new ContentImpl();
+            if (normalResponse) {
+                final MediaType impl = new MediaTypeImpl();
+                impl.setSchema(schemaProcessor.mapSchemaFromClass(api.getComponents(), m.getReturnType()));
+                produces.orElseGet(() -> singletonList("*/*")).forEach(key -> content.put(key, impl));
+            }
+            responses.put(
+                    m.getReturnType() == void.class || m.getReturnType() == Void.class && normalResponse ?
+                            "204" : "200",
+                    new APIResponseImpl().content(content));
+        }
         return operation;
     }
 
@@ -386,7 +401,7 @@ public class AnnotationProcessor {
         return Stream.concat(Stream.of(t.value()), Stream.of(t.refs()).map(TagAnnotation::new));
     }
 
-    private Optional<List<String>> findProduces(AnnotatedMethodElement m) {
+    private Optional<List<String>> findProduces(final AnnotatedMethodElement m) {
         return ofNullable(ofNullable(m.getAnnotation(Produces.class))
                 .orElseGet(() -> m.getDeclaringClass().getAnnotation(Produces.class)))
                 .map(p -> Stream.of(p.value()).collect(toList()));

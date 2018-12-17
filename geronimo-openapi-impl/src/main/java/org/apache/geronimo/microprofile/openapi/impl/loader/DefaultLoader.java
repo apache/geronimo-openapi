@@ -26,6 +26,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 import javax.servlet.ServletContext;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
@@ -41,7 +42,9 @@ public class DefaultLoader {
         return Stream.of("", "/").map(prefix -> prefix + "META-INF/openapi.json")
                 .map(it -> ofNullable(loader.getResourceAsStream(it)).orElseGet(() -> context.getResourceAsStream(it)))
                 .filter(Objects::nonNull).findFirst().map(r -> {
-                    try (final Jsonb jsonb = JsonbBuilder.create(); final InputStream stream = r) {
+                    try (final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig()
+                            .setProperty("johnzon.interfaceImplementationMapping", ApiBindings.get()));
+                         final InputStream stream = r) {
                         return jsonb.fromJson(stream, OpenAPIImpl.class);
                     } catch (final Exception e) {
                         throw new IllegalStateException(e);

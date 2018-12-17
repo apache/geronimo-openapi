@@ -29,6 +29,10 @@ public class APIResponsesImpl extends LinkedHashMap<String, APIResponse> impleme
 
     private APIResponse _default;
 
+    public APIResponses addAPIResponse(final String name, final APIResponse item) {
+        return addApiResponse(name, item);
+    }
+
     @Override
     public APIResponses addApiResponse(final String name, final APIResponse item) {
         this.put(name, item);

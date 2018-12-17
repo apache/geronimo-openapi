@@ -701,6 +701,7 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
+    @JsonbTypeAdapter(Serializers.SchemaTypeSerializer.class)
     public void setType(final SchemaType _type) {
         this._type = _type;
     }

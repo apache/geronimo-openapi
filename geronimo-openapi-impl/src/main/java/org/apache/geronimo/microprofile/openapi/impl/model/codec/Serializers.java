@@ -19,6 +19,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model.codec;
 import static java.util.Locale.ROOT;
 
 import java.math.BigDecimal;
+import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.adapter.JsonbAdapter;
@@ -68,7 +69,13 @@ public final class Serializers {
 
         @Override
         public E adaptFromJson(final String obj) {
-            return Enum.valueOf(type, obj.toUpperCase(ROOT));
+            try {
+                return Enum.valueOf(type, obj.toUpperCase(ROOT));
+            } catch (final IllegalArgumentException iae) {
+                return Stream.of(type.getEnumConstants())
+                             .filter(it -> it.toString().equals(obj)).findFirst()
+                             .orElseThrow(() -> iae);
+            }
         }
     }
 

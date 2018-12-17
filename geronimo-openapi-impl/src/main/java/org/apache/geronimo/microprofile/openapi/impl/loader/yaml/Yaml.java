@@ -27,6 +27,7 @@ import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbTransient;
 
+import org.apache.geronimo.microprofile.openapi.impl.loader.ApiBindings;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.CallbackImpl;
@@ -131,40 +132,7 @@ public final class Yaml {
     // let be reusable in integrations
     public static ObjectMapper getObjectMapper() {
         final SimpleAbstractTypeResolver resolver = new SimpleAbstractTypeResolver();
-        resolver.addMapping(APIResponse.class, APIResponseImpl.class);
-        resolver.addMapping(APIResponses.class, APIResponsesImpl.class);
-        resolver.addMapping(Callback.class, CallbackImpl.class);
-        resolver.addMapping(Components.class, ComponentsImpl.class);
-        resolver.addMapping(Contact.class, ContactImpl.class);
-        resolver.addMapping(Content.class, ContentImpl.class);
-        resolver.addMapping(Discriminator.class, DiscriminatorImpl.class);
-        resolver.addMapping(Encoding.class, EncodingImpl.class);
-        resolver.addMapping(Example.class, ExampleImpl.class);
-        resolver.addMapping(Extensible.class, ExtensibleImpl.class);
-        resolver.addMapping(ExternalDocumentation.class, ExternalDocumentationImpl.class);
-        resolver.addMapping(Header.class, HeaderImpl.class);
-        resolver.addMapping(Info.class, InfoImpl.class);
-        resolver.addMapping(License.class, LicenseImpl.class);
-        resolver.addMapping(Link.class, LinkImpl.class);
-        resolver.addMapping(MediaType.class, MediaTypeImpl.class);
-        resolver.addMapping(OAuthFlow.class, OAuthFlowImpl.class);
-        resolver.addMapping(OAuthFlows.class, OAuthFlowsImpl.class);
-        resolver.addMapping(OpenAPI.class, OpenAPIImpl.class);
-        resolver.addMapping(Operation.class, OperationImpl.class);
-        resolver.addMapping(Parameter.class, ParameterImpl.class);
-        resolver.addMapping(PathItem.class, PathItemImpl.class);
-        resolver.addMapping(Paths.class, PathsImpl.class);
-        resolver.addMapping(Reference.class, ReferenceImpl.class);
-        resolver.addMapping(RequestBody.class, RequestBodyImpl.class);
-        resolver.addMapping(Schema.class, SchemaImpl.class);
-        resolver.addMapping(Scopes.class, ScopesImpl.class);
-        resolver.addMapping(SecurityRequirement.class, SecurityRequirementImpl.class);
-        resolver.addMapping(SecurityScheme.class, SecuritySchemeImpl.class);
-        resolver.addMapping(Server.class, ServerImpl.class);
-        resolver.addMapping(ServerVariable.class, ServerVariableImpl.class);
-        resolver.addMapping(ServerVariables.class, ServerVariablesImpl.class);
-        resolver.addMapping(Tag.class, TagImpl.class);
-        resolver.addMapping(XML.class, XMLImpl.class);
+        ApiBindings.get().forEach((k, v) -> resolver.addMapping(Class.class.cast(k), v));
 
         final SimpleModule module = new SimpleModule();
         module.setAbstractTypes(resolver);
