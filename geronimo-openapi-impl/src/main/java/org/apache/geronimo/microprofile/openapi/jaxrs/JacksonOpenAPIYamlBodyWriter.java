@@ -25,6 +25,7 @@ import java.lang.reflect.Type;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Vetoed;
 import javax.ws.rs.ConstrainedTo;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -49,6 +50,7 @@ public class JacksonOpenAPIYamlBodyWriter<T> extends BaseOpenAPIYamlBodyWriter<T
         Mapper.get().writeValue(entityStream, entity);
     }
 
+    @Vetoed
     private static class Mapper {
         private static final AtomicReference<com.fasterxml.jackson.databind.ObjectMapper> REF = new AtomicReference<>();
 
