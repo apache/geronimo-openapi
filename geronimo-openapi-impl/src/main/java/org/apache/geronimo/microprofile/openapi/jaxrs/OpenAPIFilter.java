@@ -20,10 +20,12 @@ import static javax.ws.rs.Priorities.USER;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import static javax.ws.rs.core.MediaType.WILDCARD_TYPE;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -34,6 +36,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
+import javax.ws.rs.ext.Providers;
 
 import org.apache.geronimo.microprofile.openapi.cdi.GeronimoOpenAPIExtension;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
@@ -41,13 +44,18 @@ import org.eclipse.microprofile.openapi.models.OpenAPI;
 // theorically a jaxrs endpoint to benefit from jaxrs tooling and filters - but forbidden by TCK :(
 // @Path("openapi") + @GET
 @Provider
+@Dependent
 @PreMatching
 @Priority(USER)
-@ApplicationScoped
 public class OpenAPIFilter implements ContainerRequestFilter {
+
+    private static final Annotation[] NO_ANNOTATION = new Annotation[0];
 
     @Inject
     private GeronimoOpenAPIExtension extension;
+
+    @Context
+    private Providers providers;
 
     private OpenAPI openApi;
     private MediaType defaultMediaType;
@@ -77,7 +85,11 @@ public class OpenAPIFilter implements ContainerRequestFilter {
         if (mediaTypes.isEmpty()) {
             return defaultMediaType;
         }
-        return mediaTypes.stream().filter(it -> !WILDCARD_TYPE.equals(it)).findFirst().orElse(defaultMediaType);
+        return mediaTypes.stream()
+                .filter(it -> !WILDCARD_TYPE.equals(it))
+                .findFirst()
+                .filter(it -> providers.getMessageBodyReader(OpenAPI.class, OpenAPI.class, NO_ANNOTATION, it) != null)
+                .orElse(defaultMediaType);
     }
 
     @Context

@@ -17,6 +17,7 @@
 package org.apache.geronimo.microprofile.openapi.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URL;
 
@@ -41,6 +42,21 @@ public class YamlAnswerTest extends Arquillian {
 
     @ArquillianResource
     private URL base;
+
+    @Test
+    public void getWildcard() {
+        assertEquals("---\nopenapi: \"3.0.1\"\n", api("*/*"));
+    }
+
+    @Test
+    public void getMissing() { // some MP server will match json even if default is set to yaml cause */*+json usage
+        assertTrue(api("foo/bar").contains("\"3.0.1\""));
+    }
+
+    @Test
+    public void getTextHtml() {
+        assertTrue(api("text/html").contains("\"3.0.1\""));
+    }
 
     @Test
     public void getYaml() {
