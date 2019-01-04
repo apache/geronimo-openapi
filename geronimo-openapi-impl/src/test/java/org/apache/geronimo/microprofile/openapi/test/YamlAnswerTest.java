@@ -16,13 +16,6 @@
  */
 package org.apache.geronimo.microprofile.openapi.test;
 
-import static org.junit.Assert.assertEquals;
-
-import java.net.URL;
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.arquillian.testng.Arquillian;
@@ -31,6 +24,13 @@ import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.asset.EmptyAsset;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.testng.annotations.Test;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.core.MediaType;
+import java.net.URL;
+
+import static org.junit.Assert.assertEquals;
 
 public class YamlAnswerTest extends Arquillian {
     @Deployment(testable = false)
@@ -45,6 +45,11 @@ public class YamlAnswerTest extends Arquillian {
     @Test
     public void getYaml() {
         assertEquals("---\nopenapi: \"3.0.1\"\n", api("text/vnd.yaml"));
+    }
+
+    @Test
+    public void getYamlTextHtml() {
+        assertEquals("---\nopenapi: \"3.0.1\"\n", api(MediaType.TEXT_HTML));
     }
 
     @Test

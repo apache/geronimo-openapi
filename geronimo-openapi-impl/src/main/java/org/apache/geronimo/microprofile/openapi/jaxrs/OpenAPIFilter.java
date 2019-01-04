@@ -18,6 +18,7 @@ package org.apache.geronimo.microprofile.openapi.jaxrs;
 
 import static javax.ws.rs.Priorities.USER;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static javax.ws.rs.core.MediaType.TEXT_HTML;
 import static javax.ws.rs.core.MediaType.WILDCARD_TYPE;
 
 import java.util.List;
@@ -77,7 +78,7 @@ public class OpenAPIFilter implements ContainerRequestFilter {
         if (mediaTypes.isEmpty()) {
             return defaultMediaType;
         }
-        return mediaTypes.stream().filter(it -> !WILDCARD_TYPE.equals(it)).findFirst().orElse(defaultMediaType);
+        return mediaTypes.stream().filter(it -> !WILDCARD_TYPE.equals(it) && !TEXT_HTML.equals(it.toString())).findFirst().orElse(defaultMediaType);
     }
 
     @Context
