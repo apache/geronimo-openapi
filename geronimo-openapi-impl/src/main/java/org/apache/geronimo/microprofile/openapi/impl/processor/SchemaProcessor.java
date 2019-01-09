@@ -16,6 +16,7 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
+import static java.util.Arrays.asList;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
@@ -83,23 +84,32 @@ public class SchemaProcessor {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING).nullable(true);
             } else {
                 final Class from = Class.class.cast(model);
-                ofNullable(from.getAnnotation(Schema.class)).ifPresent(s -> sets(components, Schema.class.cast(s), schema));
-                // schema.items(new SchemaImpl());
-                schema.properties(new HashMap<>());
-                Class<?> current = from;
-                // todo: use getters first then fields, for JSON-B the private only fields must be ignored
-                while (current != null && current != Object.class) {
-                    Stream.of(current.getDeclaredFields())
-                            .filter(f -> {
-                                final boolean explicit = f.isAnnotationPresent(Schema.class);
-                                return !explicit || !f.getAnnotation(Schema.class).hidden();
-                            })
-                            .peek(f -> handleRequired(schema, f))
-                            .forEach(f -> {
-                                final String fieldName = findFieldName(f);
-                                schema.getProperties().put(fieldName, mapField(components, f));
-                            });
-                    current = current.getSuperclass();
+                if (from.isEnum()) {
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING)
+                          .enumeration(asList(from.getEnumConstants()))
+                          .nullable(true);
+                } else {
+                    ofNullable(from.getAnnotation(Schema.class)).ifPresent(
+                            s -> sets(components, Schema.class.cast(s), schema));
+                    // schema.items(new SchemaImpl());
+                    schema.properties(new HashMap<>());
+                    Class<?> current = from;
+                    // todo: use getters first then fields, for JSON-B the private only fields must be ignored
+                    while (current != null && current != Object.class) {
+                        Stream.of(current.getDeclaredFields())
+                              .filter(f -> {
+                                  final boolean explicit = f.isAnnotationPresent(Schema.class);
+                                  return !explicit || !f.getAnnotation(Schema.class)
+                                                        .hidden();
+                              })
+                              .peek(f -> handleRequired(schema, f))
+                              .forEach(f -> {
+                                  final String fieldName = findFieldName(f);
+                                  schema.getProperties()
+                                        .put(fieldName, mapField(components, f));
+                              });
+                        current = current.getSuperclass();
+                    }
                 }
             }
         } else {

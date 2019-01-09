@@ -26,7 +26,7 @@
 
   <groupId>org.apache.geronimo</groupId>
   <artifactId>geronimo-openapi</artifactId>
-  <version>1.0.5-SNAPSHOT</version>
+  <version>1.0.4-SNAPSHOT</version>
   <name>Geronimo OpenAPI</name>
   <packaging>pom</packaging>
   <description>

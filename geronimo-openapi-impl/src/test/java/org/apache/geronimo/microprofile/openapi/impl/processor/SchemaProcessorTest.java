@@ -16,6 +16,7 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
+import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
 
 import javax.json.bind.annotation.JsonbProperty;
@@ -37,6 +38,23 @@ public class SchemaProcessorTest {
         final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), JsonbData.class);
         assertEquals(1, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("foo").getType());
+    }
+
+    @Test
+    public void mapEnum() {
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), DataWithEnum.class);
+        assertEquals(1, schema.getProperties().size());
+        final Schema anEnum = schema.getProperties().get("anEnum");
+        assertEquals(Schema.SchemaType.STRING, anEnum.getType());
+        assertEquals(asList(AnEnum.A, AnEnum.B), anEnum.getEnumeration());
+    }
+
+    public enum AnEnum {
+        A, B;
+    }
+
+    public static class DataWithEnum {
+        private AnEnum anEnum;
     }
 
     public static class Data {
