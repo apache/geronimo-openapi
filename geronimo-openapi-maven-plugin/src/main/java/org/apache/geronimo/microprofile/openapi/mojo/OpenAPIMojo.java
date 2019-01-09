@@ -47,6 +47,7 @@ import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.InfoImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedMethodElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedTypeElement;
@@ -83,6 +84,9 @@ public class OpenAPIMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "${project}", readonly = true)
     protected MavenProject project;
+
+    @Parameter
+    protected InfoImpl info;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -140,6 +144,21 @@ public class OpenAPIMojo extends AbstractMojo {
         } catch (final IOException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
+
+        // info are required
+        if (info == null) {
+            info = new InfoImpl();
+        }
+        if (info.getVersion() == null) {
+            info.setVersion(project.getVersion());
+        }
+        if (info.getTitle() == null) {
+            info.setTitle(project.getName());
+        }
+        if (info.getDescription() == null) {
+            info.setDescription(project.getDescription());
+        }
+        api.info(info);
 
         output.getParentFile().mkdirs();
         try (final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(prettify));

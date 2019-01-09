@@ -35,6 +35,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.geronimo.microprofile.openapi.impl.loader.ApiBindings;
 import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
+import org.apache.maven.project.MavenProject;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
 import org.eclipse.microprofile.openapi.models.Operation;
 import org.eclipse.microprofile.openapi.models.media.Schema;
@@ -46,8 +47,12 @@ public class OpenAPIMojoTest {
         final OpenAPIMojo mojo = new OpenAPIMojo();
         mojo.output = new File("target/OpenAPIMojoTest_run_1.json");
         mojo.endpointClasses = singleton(HelloServiceImpl1.class.getName());
+        mojo.project = new MavenProject();
+        mojo.project.setVersion("1.2.3");
         mojo.execute();
         final OpenAPI openAPI = readOpenAPI(mojo.output);
+        assertNotNull(openAPI.getInfo());
+        assertEquals("1.2.3", openAPI.getInfo().getVersion());
         final Operation get = openAPI.getPaths().get("/sayHello/{a}").getGET();
         assertNotNull(get);
         assertEquals(1, get.getParameters().size());

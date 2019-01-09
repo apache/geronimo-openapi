@@ -47,6 +47,11 @@ Here is how to define it:
           <endpointClass>com.test.SomeEndpoint</endpointClass>
           <endpointClass>com.test.SomeOtherEndpoint</endpointClass>
         </endpointClasses>
+        <info>
+          <version>1</version>
+          <title>My Title</title>
+          <description>Bla Bla</description>
+        </info>
       </configuration>
     </execution>
   </executions>
