@@ -306,33 +306,48 @@ public class AnnotationProcessor {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(items).collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
                     it -> mapResponse(api.getComponents(), it, produces.orElse(null)), (a, b) -> b)));
-            responses.values().stream().filter(it -> it.getContent() == null).forEach(v -> {
-                Type returnType = m.getReturnType();
-                if (returnType == void.class || returnType == Response.class) {
-                    final ContentImpl content = new ContentImpl();
-                    if (Response.class == returnType || Stream.of(m.getParameters()).anyMatch(it -> it.isAnnotationPresent(Suspended.class))) {
-                        content.put("200", new MediaTypeImpl());
-                    } else {
-                        content.put("204", new MediaTypeImpl());
-                    }
-                    v.content(content);
-                    return;
-                }
+            responses.values().stream()
+                     .filter(it -> it.getContent() == null || it.getContent().isEmpty() ||
+                             it.getContent().values().stream().anyMatch(c -> c.getSchema() == null))
+                     .forEach(v -> {
+                         Type returnType = m.getReturnType();
+                         if (returnType == void.class || returnType == Response.class) {
+                             if (v.getContent() == null || v.getContent().isEmpty()) {
+                                 final ContentImpl content = new ContentImpl();
+                                 if (Response.class == returnType ||
+                                         Stream.of(m.getParameters()).anyMatch(it -> it.isAnnotationPresent(Suspended.class))) {
+                                     content.put("200", new MediaTypeImpl());
+                                 } else {
+                                     content.put("204", new MediaTypeImpl());
+                                 }
+                                 v.content(content);
+                             }
+                             return;
+                         }
 
-                if (ParameterizedType.class.isInstance(returnType)) {
-                    final ParameterizedType pt = ParameterizedType.class.cast(returnType);
-                    if (pt.getActualTypeArguments().length > 0) {
-                        if (pt.getRawType() == CompletionStage.class) {
-                            returnType = pt.getActualTypeArguments()[0];
-                        }
-                    }
-                }
-                final ContentImpl content = new ContentImpl();
-                final MediaTypeImpl mediaType = new MediaTypeImpl();
-                mediaType.setSchema(schemaProcessor.mapSchemaFromClass(api.getComponents(), returnType));
-                content.put("", mediaType);
-                v.content(content);
-            });
+                         if (ParameterizedType.class.isInstance(returnType)) {
+                             final ParameterizedType pt = ParameterizedType.class.cast(returnType);
+                             if (pt.getActualTypeArguments().length > 0) {
+                                 if (pt.getRawType() == CompletionStage.class) {
+                                     returnType = pt.getActualTypeArguments()[0];
+                                 }
+                             }
+                         }
+                         final org.eclipse.microprofile.openapi.models.media.Schema schema =
+                                 schemaProcessor.mapSchemaFromClass(
+                                         api.getComponents(), returnType);
+                         if (v.getContent() == null || v.getContent().isEmpty()) {
+                             final ContentImpl content = new ContentImpl();
+                             final MediaTypeImpl mediaType = new MediaTypeImpl();
+                             mediaType.setSchema(schema);
+                             content.put("", mediaType);
+                             v.content(content);
+                         } else {
+                             v.getContent().values().stream()
+                                .filter(it -> it.getSchema() == null)
+                                .forEach(it -> it.schema(schema));
+                         }
+                    });
             responses.values().stream().filter(r -> r.getContent() != null)
                      .forEach(resp -> ofNullable(resp.getContent().remove(""))
                              .ifPresent(updated -> produces.ifPresent(mt -> mt.forEach(type -> resp.getContent().put(type, updated)))));
