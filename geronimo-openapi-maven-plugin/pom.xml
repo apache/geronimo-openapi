@@ -145,6 +145,7 @@
             <goal>clean</goal>
             <goal>install</goal>
           </goals>
+          <postBuildHookScript>verify.bsh</postBuildHookScript>
         </configuration>
         <executions>
           <execution>

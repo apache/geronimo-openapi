@@ -1,0 +1,8 @@
+import java.io.*;
+
+File generated = new File( basedir, "target/classes/META-INF/classes/openapi.json" );
+
+if ( !generated.isFile() )
+{
+    throw new FileNotFoundException( "Could not find generated OpenAPI definition: " + file );
+}
