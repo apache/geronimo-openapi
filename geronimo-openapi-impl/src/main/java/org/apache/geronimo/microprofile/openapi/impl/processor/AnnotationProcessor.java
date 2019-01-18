@@ -93,6 +93,7 @@ import org.eclipse.microprofile.openapi.annotations.Components;
 import org.eclipse.microprofile.openapi.annotations.ExternalDocumentation;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
 import org.eclipse.microprofile.openapi.annotations.callbacks.Callback;
+import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
 import org.eclipse.microprofile.openapi.annotations.enums.ParameterStyle;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeIn;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType;
@@ -435,13 +436,18 @@ public class AnnotationProcessor {
                     if (hasJaxRsParams(annotatedElement)) {
                         final ParameterImpl parameter = new ParameterImpl();
                         if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
-                            parameter.name(annotatedElement.getAnnotation(HeaderParam.class).value());
+                            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER)
+                                    .name(annotatedElement.getAnnotation(HeaderParam.class).value());
                         } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
-                            parameter.name(annotatedElement.getAnnotation(CookieParam.class).value());
+                            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE)
+                                    .name(annotatedElement.getAnnotation(CookieParam.class).value());
                         } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
-                            parameter.required(true).name(annotatedElement.getAnnotation(PathParam.class).value());
+                            parameter.required(true)
+                                    .in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH)
+                                    .name(annotatedElement.getAnnotation(PathParam.class).value());
                         } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
-                            parameter.name(annotatedElement.getAnnotation(QueryParam.class).value());
+                            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
+                                    .name(annotatedElement.getAnnotation(QueryParam.class).value());
                         }
                         parameter.schema(schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType()))
                                  .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE);
@@ -809,6 +815,10 @@ public class AnnotationProcessor {
         impl.description(parameter.description());
         impl.required(parameter.required());
         impl.name(parameter.name());
+        impl.in(of(parameter.in())
+                .filter(s -> s != ParameterIn.DEFAULT).map(Enum::name)
+                .map(org.eclipse.microprofile.openapi.models.parameters.Parameter.In::valueOf)
+                .orElse(null));
         impl.style(of(parameter.style())
                 .filter(s -> s != ParameterStyle.DEFAULT).map(Enum::name)
                 .map(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style::valueOf)
