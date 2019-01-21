@@ -37,14 +37,17 @@ public class TckMetaInfBugWorkaround implements ConfigSourceProvider {
     }
 
     private ConfigSource create(final ClassLoader classLoader) {
-        final Context context = ParallelWebappClassLoader.class.cast(classLoader)
-                .getResources()
-                .getContext();
-        final File config = new File(new File(context.getCatalinaBase(), "webapps/" + context.getDocBase()), "META-INF/microprofile-config.properties");
-        try {
-            return config.exists() ? new PropertyFileConfigSource(config.toURI().toURL()) : null;
-        } catch (final MalformedURLException e) {
-            throw new IllegalStateException(e);
+        if (classLoader instanceof ParallelWebappClassLoader) {
+            final Context context = ParallelWebappClassLoader.class.cast(classLoader)
+                    .getResources()
+                    .getContext();
+            final File config = new File(new File(context.getCatalinaBase(), "webapps/" + context.getDocBase()), "META-INF/microprofile-config.properties");
+            try {
+                return config.exists() ? new PropertyFileConfigSource(config.toURI().toURL()) : null;
+            } catch (final MalformedURLException e) {
+                throw new IllegalStateException(e);
+            }
         }
+        return null;
     }
 }
