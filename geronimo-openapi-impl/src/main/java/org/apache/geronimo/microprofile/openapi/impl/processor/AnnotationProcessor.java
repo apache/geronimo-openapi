@@ -378,10 +378,7 @@ public class AnnotationProcessor {
                 impl.setSchema(schemaProcessor.mapSchemaFromClass(api.getComponents(), m.getReturnType()));
                 produces.orElseGet(() -> singletonList("*/*")).forEach(key -> content.put(key, impl));
             }
-            responses.put(
-                    m.getReturnType() == void.class || m.getReturnType() == Void.class && normalResponse ?
-                            "204" : "200",
-                    new APIResponseImpl().content(content));
+            responses.defaultValue(new APIResponseImpl().description("default response").content(content));
         }
         return operation;
     }

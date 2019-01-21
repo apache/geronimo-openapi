@@ -40,6 +40,7 @@ public class APIResponsesImpl extends LinkedHashMap<String, APIResponse> impleme
     }
 
     @Override
+    @JsonbProperty("default")
     public APIResponse getDefault() {
         return _default;
     }
