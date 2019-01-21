@@ -88,6 +88,7 @@ import org.apache.geronimo.microprofile.openapi.impl.model.ServerImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariableImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariablesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.TagImpl;
+import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.annotations.Components;
 import org.eclipse.microprofile.openapi.annotations.ExternalDocumentation;
@@ -131,10 +132,13 @@ import org.eclipse.microprofile.openapi.models.security.Scopes;
 @Vetoed
 public class AnnotationProcessor {
     private final GeronimoOpenAPIConfig config;
-    private final SchemaProcessor schemaProcessor = new SchemaProcessor();
+    private final SchemaProcessor schemaProcessor;
+    private final NamingStrategy operationNamingStrategy;
 
-    public AnnotationProcessor(final GeronimoOpenAPIConfig config) {
+    public AnnotationProcessor(final GeronimoOpenAPIConfig config, final NamingStrategy strategy) {
         this.config = config;
+        this.schemaProcessor = new SchemaProcessor();
+        this.operationNamingStrategy = strategy;
     }
 
     public void processClass(final String basePath, final OpenAPI api, final AnnotatedElement annotatedType,
@@ -162,25 +166,25 @@ public class AnnotationProcessor {
                     final Path nestedPath = m.getAnnotation(Path.class);
                     final String completePath = buildPath(basePath, path, nestedPath);
                     if (m.isAnnotationPresent(GET.class)) {
-                        getPathItem(api, completePath).setGET(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setGET(buildOperation(api, m, annotatedType, "GET", completePath));
                     } else if (m.isAnnotationPresent(PUT.class)) {
-                        getPathItem(api, completePath).setPUT(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setPUT(buildOperation(api, m, annotatedType, "PUT", completePath));
                     } else if (m.isAnnotationPresent(POST.class)) {
-                        getPathItem(api, completePath).setPOST(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setPOST(buildOperation(api, m, annotatedType, "POST", completePath));
                     } else if (m.isAnnotationPresent(HEAD.class)) {
-                        getPathItem(api, completePath).setHEAD(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setHEAD(buildOperation(api, m, annotatedType, "HEAD", completePath));
                     } else if (m.isAnnotationPresent(OPTIONS.class)) {
-                        getPathItem(api, completePath).setOPTIONS(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setOPTIONS(buildOperation(api, m, annotatedType, "OPTIONS", completePath));
                     } else if (m.isAnnotationPresent(PATCH.class)) {
-                        getPathItem(api, completePath).setPATCH(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setPATCH(buildOperation(api, m, annotatedType, "PATCH", completePath));
                     } else if (m.isAnnotationPresent(DELETE.class)) {
-                        getPathItem(api, completePath).setDELETE(buildOperation(api, m, annotatedType));
+                        getPathItem(api, completePath).setDELETE(buildOperation(api, m, annotatedType, "DELETE", completePath));
                     } else {
                         Stream.of(m.getAnnotations()).filter(it -> it.annotationType().isAnnotationPresent(HttpMethod.class))
                                 .findFirst().ifPresent(http -> {
                             final String mtd = http.annotationType().getAnnotation(HttpMethod.class).value();
                             if ("TRACE".equals(mtd)) {
-                                getPathItem(api, completePath).setTRACE(buildOperation(api, m, annotatedType));
+                                getPathItem(api, completePath).setTRACE(buildOperation(api, m, annotatedType, mtd, completePath));
                             } // else: how to map it???
                         });
                     }
@@ -225,7 +229,8 @@ public class AnnotationProcessor {
                 .collect(toList());
     }
 
-    private Operation buildOperation(final OpenAPI api, final AnnotatedMethodElement m, final AnnotatedElement declaring) {
+    private Operation buildOperation(final OpenAPI api, final AnnotatedMethodElement m, final AnnotatedElement declaring,
+                                     final String httpVerb, final String path) {
         final Optional<org.eclipse.microprofile.openapi.annotations.Operation> opOpt = ofNullable(m.getAnnotation(org.eclipse.microprofile.openapi.annotations.Operation.class));
         if (opOpt.map(org.eclipse.microprofile.openapi.annotations.Operation::hidden).orElse(false)) {
             return null;
@@ -240,7 +245,7 @@ public class AnnotationProcessor {
             if (!op.operationId().isEmpty()) {
                 operation.operationId(op.operationId());
             } else {
-                operation.operationId(m.getName());
+                operation.operationId(operationNamingStrategy.name(new NamingStrategy.Context(m, httpVerb, path)));
             }
             if (!op.summary().isEmpty()) {
                 operation.summary(op.summary());
@@ -250,7 +255,7 @@ public class AnnotationProcessor {
                 operation.description(op.description());
             }
         } else {
-            operation.operationId(m.getName());
+            operation.operationId(operationNamingStrategy.name(new NamingStrategy.Context(m, httpVerb, path)));
         }
 
         final Optional<String> servers = ofNullable(config.read(OASConfig.SERVERS_OPERATION_PREFIX + operation.getOperationId(), null));

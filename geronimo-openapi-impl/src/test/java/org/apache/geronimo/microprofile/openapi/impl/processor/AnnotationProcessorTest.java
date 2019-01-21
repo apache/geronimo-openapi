@@ -20,6 +20,7 @@ import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.ClassElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.MethodElement;
+import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
 import org.eclipse.microprofile.openapi.models.PathItem;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter;
@@ -30,7 +31,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.testng.Assert.assertEquals;
@@ -40,7 +44,7 @@ public class AnnotationProcessorTest {
 
     @Test
     public void ensureParametersAreMapped() {
-        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create());
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
         OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                 Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -49,6 +53,23 @@ public class AnnotationProcessorTest {
         List<Parameter> parameters = pathItem.getGET().getParameters();
         assertEquals(Parameter.In.PATH, parameters.get(0).getIn());
         // TODO add more assertions
+    }
+
+    @Test
+    public void namingStrategy() {
+        final Map<NamingStrategy, String> expectations = new HashMap<>();
+        expectations.put(new NamingStrategy.Default(), "hello");
+        expectations.put(new NamingStrategy.Qualified(), "org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessorTest$TestResource.hello");
+        expectations.put(new NamingStrategy.Http(), "GET:/test/{a}");
+
+        final GeronimoOpenAPIConfig config = (value, def) -> null;
+        expectations.forEach((strategy, operationName) -> {
+            final AnnotationProcessor annotationProcessor = new AnnotationProcessor(config, strategy);
+            final OpenAPI openAPI = new OpenAPIImpl();
+            annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
+                    Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
+            assertEquals(openAPI.getPaths().get("/test/{a}").getGET().getOperationId(), operationName);
+        });
     }
 
     @Path("/test")

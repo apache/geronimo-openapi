@@ -20,7 +20,6 @@
 3. JSONB (for JSON support)
 4. Jackson+YAML extension (for YAML support)
 
-
 == Maven Plugin
 
 You can define the maven plugin to generate at build time the `openapi.json` file.

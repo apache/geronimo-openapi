@@ -22,6 +22,7 @@ import static org.testng.Assert.assertEquals;
 import javax.json.bind.annotation.JsonbProperty;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
+import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.testng.annotations.Test;
 

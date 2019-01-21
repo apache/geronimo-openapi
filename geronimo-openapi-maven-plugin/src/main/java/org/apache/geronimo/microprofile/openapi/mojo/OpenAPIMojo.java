@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -42,6 +43,7 @@ import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
 import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.ClassElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.MethodElement;
+import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -71,6 +73,9 @@ public class OpenAPIMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "${project.build.outputDirectory}")
     protected File classes;
+
+    @Parameter(property = "geronimo-openapi.operationNamingStrategy", defaultValue = "org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy$Default")
+    protected String operationNamingStrategy;
 
     @Parameter(defaultValue = "${project}", readonly = true)
     protected MavenProject project;
@@ -115,7 +120,8 @@ public class OpenAPIMojo extends AbstractMojo {
                 }
             }) {
                 final AnnotationProcessor processor = new AnnotationProcessor(
-                        (value, def) -> ofNullable(configuration).orElseGet(Collections::emptyMap).getOrDefault(value, def));
+                        (value, def) -> ofNullable(configuration).orElseGet(Collections::emptyMap).getOrDefault(value, def),
+                        loadNamingStrategy());
                 if (application != null) {
                     processor.processApplication(api, new ClassElement(load(application)));
                     getLog().info("Processed application " + application);
@@ -158,6 +164,23 @@ public class OpenAPIMojo extends AbstractMojo {
             throw new MojoExecutionException(e.getMessage(), e);
         }
         getLog().info("Wrote " + output);
+    }
+
+    private NamingStrategy loadNamingStrategy() {
+        return ofNullable(operationNamingStrategy)
+                .map(String::trim)
+                .filter(it -> !it.isEmpty())
+                .map(it -> {
+                    try {
+                        return Thread.currentThread().getContextClassLoader().loadClass(it).getConstructor().newInstance();
+                    } catch (final InstantiationException | IllegalAccessException | NoSuchMethodException | ClassNotFoundException e) {
+                        throw new IllegalArgumentException(e);
+                    } catch (final InvocationTargetException ite) {
+                        throw new IllegalArgumentException(ite.getTargetException());
+                    }
+                })
+                .map(NamingStrategy.class::cast)
+                .orElseGet(NamingStrategy.Default::new);
     }
 
     private Class<?> load(final String name) {

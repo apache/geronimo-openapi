@@ -23,6 +23,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,6 +55,7 @@ import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedMethodElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedTypeElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
+import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.apache.geronimo.microprofile.openapi.jaxrs.JacksonOpenAPIYamlBodyWriter;
 import org.apache.geronimo.microprofile.openapi.jaxrs.OpenAPIFilter;
 import org.eclipse.microprofile.openapi.OASConfig;
@@ -78,7 +80,7 @@ public class GeronimoOpenAPIExtension implements Extension {
 
     void init(@Observes final BeforeBeanDiscovery beforeBeanDiscovery) {
         config = GeronimoOpenAPIConfig.create();
-        processor = new AnnotationProcessor(config);
+        processor = new AnnotationProcessor(config, loadNamingStrategy(config));
         skipScan = Boolean.parseBoolean(config.read(OASConfig.SCAN_DISABLE, "false"));
         classes = getConfigCollection(OASConfig.SCAN_CLASSES);
         packages = getConfigCollection(OASConfig.SCAN_PACKAGES);
@@ -90,6 +92,23 @@ public class GeronimoOpenAPIExtension implements Extension {
         } catch (final Error | RuntimeException e) {
             // no-op
         }
+    }
+
+    private NamingStrategy loadNamingStrategy(final GeronimoOpenAPIConfig config) {
+        return ofNullable(config.read("model.operation.naming.strategy", null))
+                .map(String::trim)
+                .filter(it -> !it.isEmpty())
+                .map(it -> {
+                    try {
+                        return Thread.currentThread().getContextClassLoader().loadClass(it).getConstructor().newInstance();
+                    } catch (final InstantiationException | IllegalAccessException | NoSuchMethodException | ClassNotFoundException e) {
+                        throw new IllegalArgumentException(e);
+                    } catch (final InvocationTargetException ite) {
+                        throw new IllegalArgumentException(ite.getTargetException());
+                    }
+                })
+                .map(NamingStrategy.class::cast)
+                .orElseGet(NamingStrategy.Default::new);
     }
 
     void vetoJacksonIfNotHere(@Observes final ProcessAnnotatedType<JacksonOpenAPIYamlBodyWriter> event) {
