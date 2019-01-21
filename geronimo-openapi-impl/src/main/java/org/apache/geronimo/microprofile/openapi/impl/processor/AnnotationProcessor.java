@@ -383,7 +383,12 @@ public class AnnotationProcessor {
                 impl.setSchema(schemaProcessor.mapSchemaFromClass(api.getComponents(), m.getReturnType()));
                 produces.orElseGet(() -> singletonList("*/*")).forEach(key -> content.put(key, impl));
             }
-            responses.defaultValue(new APIResponseImpl().description("default response").content(content));
+            final org.eclipse.microprofile.openapi.models.responses.APIResponse defaultResponse =
+                    new APIResponseImpl().description("default response").content(content);
+            responses.put(
+                    m.getReturnType() == void.class || m.getReturnType() == Void.class && normalResponse ?
+                            "204" : "200", defaultResponse);
+            responses.defaultValue(defaultResponse);
         }
         return operation;
     }
