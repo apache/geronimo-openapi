@@ -72,6 +72,26 @@ public class AnnotationProcessorTest {
         });
     }
 
+    @Test
+    public void rootPath() {
+        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default());
+        final OpenAPI openAPI = new OpenAPIImpl();
+        annotationProcessor.processClass("", openAPI, new ClassElement(RootPath.class),
+                Stream.of(RootPath.class.getMethods()).map(MethodElement::new));
+        assertNotNull(openAPI.getPaths().get("/{a}").getGET().getOperationId()); // we didn't get an index exception
+    }
+
+    @Path("/")
+    public class RootPath {
+
+        @GET
+        @Path("/{a}")
+        @Produces(MediaType.TEXT_PLAIN)
+        public String hello() {
+            return null;
+        }
+    }
+
     @Path("/test")
     public class TestResource {
 

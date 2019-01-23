@@ -475,7 +475,7 @@ public class AnnotationProcessor {
 
     private String buildPath(final String base, final Path path, final Path mtdPath) {
         return Stream.concat(Stream.of(base), Stream.of(path, mtdPath).filter(Objects::nonNull).map(Path::value))
-                .map(v -> v.substring(v.startsWith("/") ? 1 : 0, v.endsWith("/") ? v.length() - 1 : v.length()))
+                .map(v -> v.substring(v.startsWith("/") && !"/".equalsIgnoreCase(v) ? 1 : 0, v.endsWith("/") ? v.length() - 1 : v.length()))
                 .filter(it -> !it.isEmpty())
                 .collect(joining("/", "/", ""));
     }
