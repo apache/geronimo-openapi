@@ -31,7 +31,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,11 +71,31 @@ public class AnnotationProcessorTest {
         });
     }
 
+    @Test
+    public void parentJustSlash() throws Exception {
+        final AnnotationProcessor annotationProcessor =
+                new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        final OpenAPI openAPI = new OpenAPIImpl();
+        annotationProcessor.processClass("", openAPI, new ClassElement(ParentJustSlashResource.class),
+                                         Stream.of(ParentJustSlashResource.class.getMethods()).map(MethodElement::new));
+        assertNotNull(openAPI.getPaths().get("/{a}"));
+    }
+
     @Path("/test")
     public class TestResource {
 
         @GET
         @Path("/{a}")
+        @Produces(MediaType.TEXT_PLAIN)
+        public String hello(@PathParam("a") String a) {
+            return "hello";
+        }
+    }
+
+    @Path("/")
+    public class ParentJustSlashResource {
+        @GET
+        @Path("{a}")
         @Produces(MediaType.TEXT_PLAIN)
         public String hello(@PathParam("a") String a) {
             return "hello";

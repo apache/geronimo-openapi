@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
@@ -475,6 +476,7 @@ public class AnnotationProcessor {
 
     private String buildPath(final String base, final Path path, final Path mtdPath) {
         return Stream.concat(Stream.of(base), Stream.of(path, mtdPath).filter(Objects::nonNull).map(Path::value))
+                .map(v -> v.equals("/") ? "" : v)
                 .map(v -> v.substring(v.startsWith("/") ? 1 : 0, v.endsWith("/") ? v.length() - 1 : v.length()))
                 .filter(it -> !it.isEmpty())
                 .collect(joining("/", "/", ""));
