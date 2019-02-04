@@ -48,17 +48,16 @@ public class SchemaProcessor {
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
             final org.eclipse.microprofile.openapi.models.Components components, final Type model) {
-        final boolean cached = cache.containsKey(model);
-        final org.eclipse.microprofile.openapi.models.media.Schema schema = cached ?
-                cache.get(model) :
-                of(new SchemaImpl()).map(s -> {
-                    fillSchema(components, model, s);
-                    return s;
-                }).get();
-        if (!cached && Class.class.isInstance(model) && !Class.class.cast(model).isPrimitive() && model != String.class) {
-            cache.put(Class.class.cast(model), schema);
+        final org.eclipse.microprofile.openapi.models.media.Schema cached = cache.get(model);
+        if (cached != null) {
+            return cached;
         }
-        return schema;
+        final SchemaImpl newSchema = new SchemaImpl();
+        if (Class.class.isInstance(model) && !Class.class.cast(model).isPrimitive() && model != String.class) {
+            cache.put(Class.class.cast(model), newSchema);
+        }
+        fillSchema(components, model, newSchema);
+        return newSchema;
     }
 
     public void fillSchema(final org.eclipse.microprofile.openapi.models.Components components, final Type model,
@@ -91,24 +90,30 @@ public class SchemaProcessor {
                 } else {
                     ofNullable(from.getAnnotation(Schema.class)).ifPresent(
                             s -> sets(components, Schema.class.cast(s), schema));
-                    // schema.items(new SchemaImpl());
-                    schema.properties(new HashMap<>());
-                    Class<?> current = from;
-                    // todo: use getters first then fields, for JSON-B the private only fields must be ignored
-                    while (current != null && current != Object.class) {
-                        Stream.of(current.getDeclaredFields())
-                              .filter(f -> {
-                                  final boolean explicit = f.isAnnotationPresent(Schema.class);
-                                  return !explicit || !f.getAnnotation(Schema.class)
-                                                        .hidden();
-                              })
-                              .peek(f -> handleRequired(schema, f))
-                              .forEach(f -> {
-                                  final String fieldName = findFieldName(f);
-                                  schema.getProperties()
-                                        .put(fieldName, mapField(components, f));
-                              });
-                        current = current.getSuperclass();
+
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
+
+                    final org.eclipse.microprofile.openapi.models.media.Schema existingSchema = cache.get(from);
+                    if (existingSchema != null && existingSchema != schema) {
+                        schema.setProperties(existingSchema.getProperties());
+                        schema.setRequired(existingSchema.getRequired());
+                    } else {
+                        schema.properties(new HashMap<>());
+                        Class<?> current = from;
+                        // todo: use getters first then fields, for JSON-B the private only fields must be ignored
+                        while (current != null && current != Object.class) {
+                            Stream.of(current.getDeclaredFields())
+                                  .filter(f -> {
+                                      final boolean explicit = f.isAnnotationPresent(Schema.class);
+                                      return !explicit || !f.getAnnotation(Schema.class).hidden();
+                                  })
+                                  .peek(f -> handleRequired(schema, f))
+                                  .forEach(f -> {
+                                      final String fieldName = findFieldName(f);
+                                      schema.getProperties().put(fieldName, mapField(components, f));
+                                  });
+                            current = current.getSuperclass();
+                        }
                     }
                 }
             }

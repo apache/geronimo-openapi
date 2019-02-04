@@ -17,7 +17,11 @@
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toSet;
 import static org.testng.Assert.assertEquals;
+
+import java.util.List;
+import java.util.stream.Stream;
 
 import javax.json.bind.annotation.JsonbProperty;
 
@@ -49,8 +53,30 @@ public class SchemaProcessorTest {
         assertEquals(asList(AnEnum.A, AnEnum.B), anEnum.getEnumeration());
     }
 
+    @Test
+    public void cyclicRef() {
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), SomeClass.class);
+        assertEquals(3, schema.getProperties().size());
+        assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("simple").getType());
+        assertSomeClass(schema.getProperties().get("child"));
+        final Schema children = schema.getProperties().get("children");
+        assertEquals(Schema.SchemaType.ARRAY, children.getType());
+        assertSomeClass(children.getItems());
+    }
+
+    private void assertSomeClass(final Schema schema) {
+        assertEquals(Schema.SchemaType.OBJECT, schema.getType());
+        assertEquals(Stream.of("simple", "child", "children").collect(toSet()), schema.getProperties().keySet());
+    }
+
     public enum AnEnum {
-        A, B;
+        A, B
+    }
+
+    public static class SomeClass {
+        private String simple;
+        private SomeClass child;
+        private List<SomeClass> children;
     }
 
     public static class DataWithEnum {
