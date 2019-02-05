@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import javax.json.bind.annotation.JsonbProperty;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
+import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.testng.annotations.Test;
 
@@ -55,18 +56,24 @@ public class SchemaProcessorTest {
 
     @Test
     public void cyclicRef() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), SomeClass.class);
+        final Components components = new ComponentsImpl();
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(components, SomeClass.class);
         assertEquals(3, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("simple").getType());
         assertSomeClass(schema.getProperties().get("child"));
         final Schema children = schema.getProperties().get("children");
         assertEquals(Schema.SchemaType.ARRAY, children.getType());
         assertSomeRelatedClass(children.getItems());
+        assertEquals(2, components.getSchemas().size());
+        final Schema completeSchema =
+                components.getSchemas().get("org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass");
+        assertEquals(3, completeSchema.getProperties().size());
+        assertEquals(Stream.of("simple", "child", "children").collect(toSet()), completeSchema.getProperties().keySet());
     }
 
     private void assertSomeClass(final Schema schema) {
         assertEquals(Schema.SchemaType.OBJECT, schema.getType());
-        assertEquals(Stream.of("simple", "child", "children").collect(toSet()), schema.getProperties().keySet());
+        assertEquals("#/components/schemas/org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass", schema.getRef());
     }
 
     private void assertSomeRelatedClass(final Schema schema) {

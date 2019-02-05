@@ -483,6 +483,14 @@ public class AnnotationProcessor {
     private void processComponents(final OpenAPI api, final Components components) {
         final org.eclipse.microprofile.openapi.models.Components impl = new ComponentsImpl();
         processCallbacks(impl, components.callbacks());
+        if (components.schemas().length > 0) {
+            impl.schemas(Stream.of(components.schemas())
+                               .map(it -> {
+                                   final String ref = of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref);
+                                   return new SchemaWithRef(ref, mapSchema(impl, it, ref));
+                               })
+                               .collect(toMap(it -> it.ref, it -> it.schema)));
+        }
         if (components.links().length > 0) {
             impl.links(Stream.of(components.links()).collect(
                     toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapLink)));
@@ -512,12 +520,6 @@ public class AnnotationProcessor {
             impl.examples(Stream.of(components.examples()).collect(toMap(
                     it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
         }
-        if (components.schemas().length > 0) {
-            impl.schemas(Stream.of(components.schemas())
-                    .collect(toMap(
-                            it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapSchema(impl, it))));
-        }
         if (components.responses().length > 0) {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(components.responses())
@@ -529,8 +531,8 @@ public class AnnotationProcessor {
     }
 
     private org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
-            final org.eclipse.microprofile.openapi.models.Components impl, final Schema schema) {
-        return ofNullable(schemaProcessor.mapSchema(impl, schema))
+            final org.eclipse.microprofile.openapi.models.Components impl, final Schema schema, final String ref) {
+        return ofNullable(schemaProcessor.mapSchema(impl, schema, ref))
                 .map(s -> s.externalDocs(mapExternalDocumentation(schema.externalDocs())))
                 .orElse(null);
     }
@@ -751,7 +753,7 @@ public class AnnotationProcessor {
         if (content.encoding().length > 0) {
             Stream.of(content.encoding()).forEach(e -> impl.addEncoding(e.name(), mapEncoding(components, e)));
         }
-        impl.setSchema(schemaProcessor.mapSchema(components, content.schema()));
+        impl.setSchema(schemaProcessor.mapSchema(components, content.schema(), null));
         if (content.examples().length > 0) {
             impl.examples(Stream.of(content.examples()).collect(toMap(
                     it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
@@ -796,7 +798,7 @@ public class AnnotationProcessor {
         impl.description(header.description());
         impl.allowEmptyValue(header.allowEmptyValue());
         impl.required(header.required());
-        impl.schema(schemaProcessor.mapSchema(components, header.schema()));
+        impl.schema(schemaProcessor.mapSchema(components, header.schema(), null));
         impl.style(org.eclipse.microprofile.openapi.models.headers.Header.Style.SIMPLE);
         return impl;
     }
@@ -832,7 +834,7 @@ public class AnnotationProcessor {
                 .orElse(null));
         impl.allowEmptyValue(parameter.allowEmptyValue());
         impl.allowReserved(parameter.allowReserved());
-        impl.schema(ofNullable(schemaProcessor.mapSchema(components, parameter.schema()))
+        impl.schema(ofNullable(schemaProcessor.mapSchema(components, parameter.schema(), null))
                 .map(s -> s.externalDocs(mapExternalDocumentation(parameter.schema().externalDocs())))
                 .orElseGet(() -> {
                     if (annotatedElement == null) {
@@ -841,7 +843,7 @@ public class AnnotationProcessor {
                     return schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType());
                 }));
         if (impl.getSchema() != null && impl.getSchema().getType() == null && annotatedElement != null) {
-            schemaProcessor.fillSchema(components, annotatedElement.getType(), impl.getSchema());
+            schemaProcessor.fillSchema(components, annotatedElement.getType(), impl.getSchema(), null);
         }
         of(parameter.content()).filter(it -> it.length > 0).map(Stream::of).ifPresent(c -> {
             final ContentImpl content = new ContentImpl();
@@ -1034,6 +1036,17 @@ public class AnnotationProcessor {
         @Override
         public Class<? extends Annotation> annotationType() {
             return Tag.class;
+        }
+    }
+
+    private static class SchemaWithRef {
+        private final String ref;
+        private final org.eclipse.microprofile.openapi.models.media.Schema schema;
+
+        private SchemaWithRef(final String ref,
+                              final org.eclipse.microprofile.openapi.models.media.Schema schema) {
+            this.ref = ref;
+            this.schema = schema;
         }
     }
 }

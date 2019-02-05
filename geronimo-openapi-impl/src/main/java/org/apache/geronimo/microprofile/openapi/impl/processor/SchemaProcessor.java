@@ -45,23 +45,35 @@ import org.eclipse.microprofile.openapi.models.Components;
 
 public class SchemaProcessor {
     private final Map<Type, org.eclipse.microprofile.openapi.models.media.Schema> cache = new HashMap<>();
+    private final Map<Class<?>, String> providedRefs = new HashMap<>();
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
             final org.eclipse.microprofile.openapi.models.Components components, final Type model) {
         final org.eclipse.microprofile.openapi.models.media.Schema cached = cache.get(model);
         if (cached != null) {
-            return cached;
+            return new SchemaImpl().type(cached.getType()).ref(toRef(Class.class.cast(model), null));
         }
-        final SchemaImpl newSchema = new SchemaImpl();
-        if (Class.class.isInstance(model) && !Class.class.cast(model).isPrimitive() && model != String.class) {
-            cache.put(Class.class.cast(model), newSchema);
-        }
-        fillSchema(components, model, newSchema);
-        return newSchema;
+        final SchemaImpl schema = new SchemaImpl();
+        fillSchema(components, model, schema, null);
+        return schema;
     }
 
-    public void fillSchema(final org.eclipse.microprofile.openapi.models.Components components, final Type model,
-            final org.eclipse.microprofile.openapi.models.media.Schema schema) {
+    private String toRef(final Class<?> model, final String providedRef) {
+        return "#/components/schemas/" + toRefName(model, providedRef);
+    }
+
+    // todo: introduce naming strategy? simplename can conflict so this is safer but ugly
+    private String toRefName(final Class<?> model, final String providedRef) {
+        return providedRefs.computeIfAbsent(
+                model, k -> ofNullable(providedRef)
+                        .orElseGet(() -> k.getName().replace('.', '_').replace('$', '_')));
+    }
+
+    public void fillSchema(
+            final org.eclipse.microprofile.openapi.models.Components components,
+            final Type model,
+            final org.eclipse.microprofile.openapi.models.media.Schema schema,
+            final String providedRef) {
         if (Class.class.isInstance(model)) {
             if (boolean.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN);
@@ -85,19 +97,22 @@ public class SchemaProcessor {
                 final Class from = Class.class.cast(model);
                 if (from.isEnum()) {
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING)
-                          .enumeration(asList(from.getEnumConstants()))
-                          .nullable(true);
+                                 .enumeration(asList(from.getEnumConstants()))
+                                 .nullable(true);
                 } else {
                     ofNullable(from.getAnnotation(Schema.class)).ifPresent(
-                            s -> sets(components, Schema.class.cast(s), schema));
+                            s -> sets(components, Schema.class.cast(s), schema, null));
 
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
 
                     final org.eclipse.microprofile.openapi.models.media.Schema existingSchema = cache.get(from);
                     if (existingSchema != null && existingSchema != schema) {
-                        schema.setProperties(existingSchema.getProperties());
-                        schema.setRequired(existingSchema.getRequired());
+                        schema.ref(toRef(from, providedRef));
                     } else {
+                        if (cache.putIfAbsent(from, schema) == null) {
+                            components.addSchema(toRefName(from, providedRef), schema);
+                        }
+
                         schema.properties(new HashMap<>());
                         Class<?> current = from;
                         // todo: use getters first then fields, for JSON-B the private only fields must be ignored
@@ -125,7 +140,9 @@ public class SchemaProcessor {
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
                 } else if (pt.getActualTypeArguments().length == 1 && Class.class.isInstance(pt.getActualTypeArguments()[0])) {
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
-                    fillSchema(components, Class.class.cast(pt.getActualTypeArguments()[0]), schema.getItems());
+                    final SchemaImpl items = new SchemaImpl();
+                    fillSchema(components, Class.class.cast(pt.getActualTypeArguments()[0]), items, null);
+                    schema.items(items);
                 } else {
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
                 }
@@ -154,7 +171,7 @@ public class SchemaProcessor {
 
     private org.eclipse.microprofile.openapi.models.media.Schema mapField(final Components components, final Field f) {
         final Schema annotation = f.getAnnotation(Schema.class);
-        return ofNullable(annotation).map(s -> mapSchema(components, s)).orElseGet(() -> {
+        return ofNullable(annotation).map(s -> mapSchema(components, s, null)).orElseGet(() -> {
             final org.eclipse.microprofile.openapi.models.media.Schema schemaFromClass = mapSchemaFromClass(
                     components, f.getGenericType());
             if (annotation != null) {
@@ -176,8 +193,9 @@ public class SchemaProcessor {
                 });
     }
 
-    private void mergeSchema(final Components components, final org.eclipse.microprofile.openapi.models.media.Schema impl,
-            final Schema schema) {
+    private void mergeSchema(final Components components,
+                             final org.eclipse.microprofile.openapi.models.media.Schema impl,
+                             final Schema schema) {
         impl.deprecated(schema.deprecated());
         if (schema.type() != SchemaType.DEFAULT) {
             impl.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.valueOf(schema.type().name()));
@@ -261,7 +279,8 @@ public class SchemaProcessor {
     }
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
-            final org.eclipse.microprofile.openapi.models.Components components, final Schema schema) {
+            final org.eclipse.microprofile.openapi.models.Components components, final Schema schema,
+            final String providedRefMapping) {
         if (schema.hidden() || (schema.implementation() == Void.class && schema.name().isEmpty() && schema.ref().isEmpty())) {
             if (schema.type() != SchemaType.DEFAULT) {
                 return new SchemaImpl()
@@ -271,21 +290,24 @@ public class SchemaProcessor {
         }
 
         final SchemaImpl impl = new SchemaImpl();
-        sets(components, schema, impl);
+        sets(components, schema, impl, providedRefMapping);
         return impl;
     }
 
     private void sets(final Components components, final Schema schema,
-            final org.eclipse.microprofile.openapi.models.media.Schema impl) {
+            final org.eclipse.microprofile.openapi.models.media.Schema impl,
+            final String providedRef) {
         if (!schema.ref().isEmpty()) {
             impl.ref(resolveSchemaRef(components, schema.ref()));
         } else {
             if (schema.implementation() != Void.class) {
                 final boolean array = schema.type() == SchemaType.ARRAY;
-                final org.eclipse.microprofile.openapi.models.media.Schema ref = array ? new SchemaImpl() : impl;
-                fillSchema(components, schema.implementation(), ref);
                 if (array) {
-                    impl.items(ref);
+                    final SchemaImpl itemSchema = new SchemaImpl();
+                    fillSchema(components, schema.implementation(), itemSchema, providedRef);
+                    impl.items(itemSchema);
+                } else {
+                    fillSchema(components, schema.implementation(), impl, providedRef);
                 }
             }
             mergeSchema(components, impl, schema);
