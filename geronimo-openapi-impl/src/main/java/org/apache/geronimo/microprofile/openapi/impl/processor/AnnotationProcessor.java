@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
@@ -269,7 +270,7 @@ public class AnnotationProcessor {
         of(m.getAnnotationsByType(Callback.class)).filter(it -> it.length > 0).ifPresent(cbs -> {
             final Map<String, org.eclipse.microprofile.openapi.models.callbacks.Callback> callbacks = Stream.of(cbs)
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapCallback(api.getComponents(), it)));
+                            it -> mapCallback(api, it)));
             operation.callbacks(callbacks);
         });
 
@@ -311,7 +312,7 @@ public class AnnotationProcessor {
         of(m.getAnnotationsByType(APIResponse.class)).filter(s -> s.length > 0).ifPresent(items -> {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(items).collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
-                    it -> mapResponse(api.getComponents(), it, produces.orElse(null)), (a, b) -> b)));
+                    it -> mapResponse(() -> getOrCreateComponents(api), it, produces.orElse(null)), (a, b) -> b)));
             responses.values().stream()
                      .filter(it -> it.getContent() == null || it.getContent().isEmpty() ||
                              it.getContent().values().stream().anyMatch(c -> c.getSchema() == null))
@@ -341,7 +342,7 @@ public class AnnotationProcessor {
                          }
                          final org.eclipse.microprofile.openapi.models.media.Schema schema =
                                  schemaProcessor.mapSchemaFromClass(
-                                         api.getComponents(), returnType);
+                                         () -> getOrCreateComponents(api), returnType);
                          if (v.getContent() == null || v.getContent().isEmpty()) {
                              final ContentImpl content = new ContentImpl();
                              final MediaTypeImpl mediaType = new MediaTypeImpl();
@@ -361,8 +362,9 @@ public class AnnotationProcessor {
         });
         operation.parameters(Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameter.class) || hasJaxRsParams(it))
-                .map(it -> buildParameter(it, api.getComponents())
-                        .orElseGet(() -> new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(api.getComponents(), it.getType()))))
+                .map(it -> buildParameter(it, api)
+                        .orElseGet(() -> new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(
+                                () -> getOrCreateComponents(api), it.getType()))))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
                 .filter(p -> p.isAnnotationPresent(RequestBody.class) ||
@@ -371,7 +373,7 @@ public class AnnotationProcessor {
                 .findFirst()
                 .ifPresent(p -> operation.requestBody(mapRequestBody(
                         produces.filter(it -> !it.isEmpty()).map(it -> it.iterator().next()).orElse(null), p,
-                        api.getComponents(), ofNullable(p.getAnnotation(RequestBody.class))
+                        () -> getOrCreateComponents(api), ofNullable(p.getAnnotation(RequestBody.class))
                     .orElseGet(() -> m.getAnnotation(RequestBody.class)))));
         if (operation.getResponses() == null) {
             final APIResponsesImpl responses = new APIResponsesImpl();
@@ -380,7 +382,7 @@ public class AnnotationProcessor {
             final ContentImpl content = new ContentImpl();
             if (normalResponse) {
                 final MediaType impl = new MediaTypeImpl();
-                impl.setSchema(schemaProcessor.mapSchemaFromClass(api.getComponents(), m.getReturnType()));
+                impl.setSchema(schemaProcessor.mapSchemaFromClass(() -> getOrCreateComponents(api), m.getReturnType()));
                 produces.orElseGet(() -> singletonList("*/*")).forEach(key -> content.put(key, impl));
             }
             final org.eclipse.microprofile.openapi.models.responses.APIResponse defaultResponse =
@@ -436,9 +438,9 @@ public class AnnotationProcessor {
     }
 
     private Optional<org.eclipse.microprofile.openapi.models.parameters.Parameter> buildParameter(
-            final AnnotatedTypeElement annotatedElement, final org.eclipse.microprofile.openapi.models.Components components) {
+            final AnnotatedTypeElement annotatedElement, final OpenAPI openAPI) {
         return ofNullable(ofNullable(annotatedElement.getAnnotation(Parameter.class))
-                .map(it -> mapParameter(annotatedElement, components, it))
+                .map(it -> mapParameter(annotatedElement, () -> getOrCreateComponents(openAPI), it))
                 .orElseGet(() -> {
                     if (hasJaxRsParams(annotatedElement)) {
                         final ParameterImpl parameter = new ParameterImpl();
@@ -456,7 +458,8 @@ public class AnnotationProcessor {
                             parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
                                     .name(annotatedElement.getAnnotation(QueryParam.class).value());
                         }
-                        parameter.schema(schemaProcessor.mapSchemaFromClass(components, annotatedElement.getType()))
+                        parameter.schema(schemaProcessor.mapSchemaFromClass(
+                                    () -> getOrCreateComponents(openAPI), annotatedElement.getType()))
                                  .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE);
                         return parameter;
                     }
@@ -482,12 +485,13 @@ public class AnnotationProcessor {
 
     private void processComponents(final OpenAPI api, final Components components) {
         final org.eclipse.microprofile.openapi.models.Components impl = new ComponentsImpl();
-        processCallbacks(impl, components.callbacks());
+        api.components(impl);
+        processCallbacks(api, components.callbacks());
         if (components.schemas().length > 0) {
             impl.schemas(Stream.of(components.schemas())
                                .map(it -> {
                                    final String ref = of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref);
-                                   return new SchemaWithRef(ref, mapSchema(impl, it, ref));
+                                   return new SchemaWithRef(ref, mapSchema(api, it, ref));
                                })
                                .collect(toMap(it -> it.ref, it -> it.schema)));
         }
@@ -504,17 +508,17 @@ public class AnnotationProcessor {
         if (components.requestBodies().length > 0) {
             impl.requestBodies(Stream.of(components.requestBodies())
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapRequestBody(null, null, impl, it))));
+                            it -> mapRequestBody(null, null, () -> impl, it))));
         }
         if (components.parameters().length > 0) {
             impl.parameters(Stream.of(components.parameters())
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapParameter(null, api.getComponents(), it))));
+                            it -> mapParameter(null, () -> impl, it))));
         }
         if (components.headers().length > 0) {
             impl.headers(Stream.of(components.headers())
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapHeader(impl, it))));
+                            it -> mapHeader(() -> impl, it))));
         }
         if (components.examples().length > 0) {
             impl.examples(Stream.of(components.examples()).collect(toMap(
@@ -524,15 +528,14 @@ public class AnnotationProcessor {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(components.responses())
                     .collect(toMap(it -> of(it.name()).filter(c -> !c.isEmpty()).orElseGet(it::ref),
-                            it -> mapResponse(impl, it, null), (a, b) -> b)));
+                            it -> mapResponse(() -> impl, it, null), (a, b) -> b)));
             impl.responses(responses);
         }
-        api.components(impl);
     }
 
     private org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
-            final org.eclipse.microprofile.openapi.models.Components impl, final Schema schema, final String ref) {
-        return ofNullable(schemaProcessor.mapSchema(impl, schema, ref))
+            final OpenAPI api, final Schema schema, final String ref) {
+        return ofNullable(schemaProcessor.mapSchema(() -> getOrCreateComponents(api), schema, ref))
                 .map(s -> s.externalDocs(mapExternalDocumentation(schema.externalDocs())))
                 .orElse(null);
     }
@@ -608,16 +611,16 @@ public class AnnotationProcessor {
         return !oAuthFlow.authorizationUrl().isEmpty() || !oAuthFlow.refreshUrl().isEmpty() || !oAuthFlow.tokenUrl().isEmpty();
     }
 
-    private void processCallbacks(final org.eclipse.microprofile.openapi.models.Components impl, final Callback[] callbacks) {
+    private void processCallbacks(final OpenAPI api, final Callback[] callbacks) {
         if (callbacks.length > 0) {
-            impl.setCallbacks(Stream.of(callbacks)
+            getOrCreateComponents(api).setCallbacks(Stream.of(callbacks)
                     .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
-                            it -> mapCallback(impl, it))));
+                            it -> mapCallback(api, it))));
         }
     }
 
     private org.eclipse.microprofile.openapi.models.callbacks.Callback mapCallback(
-            final org.eclipse.microprofile.openapi.models.Components components, final Callback callback) {
+            final OpenAPI api, final Callback callback) {
         final CallbackImpl impl = new CallbackImpl();
         of(callback.ref()).filter(r -> !r.isEmpty()).ifPresent(impl::ref);
 
@@ -632,9 +635,9 @@ public class AnnotationProcessor {
                     operation.setExtensions(mapExtensions(co.extensions()));
                 }
                 if (co.parameters().length > 0) {
-                    operation.parameters(mapParameters(components, co.parameters()));
+                    operation.parameters(mapParameters(api, co.parameters()));
                 }
-                operation.requestBody(mapRequestBody(null, null, components, co.requestBody()));
+                operation.requestBody(mapRequestBody(null, null, () -> getOrCreateComponents(api), co.requestBody()));
                 if (co.security().length > 0) {
                     operation.security(Stream.of(co.security()).map(this::mapSecurity).collect(toList()));
                 }
@@ -642,7 +645,7 @@ public class AnnotationProcessor {
                     final APIResponses responses = new APIResponsesImpl();
                     responses.putAll(Stream.of(co.responses())
                             .collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
-                                    it -> mapResponse(components, it, null))));
+                                    it -> mapResponse(() -> getOrCreateComponents(api), it, null))));
                     operation.responses(responses);
                 }
                 switch (co.method().toUpperCase(ROOT)) {
@@ -680,7 +683,7 @@ public class AnnotationProcessor {
     }
 
     private org.eclipse.microprofile.openapi.models.responses.APIResponse mapResponse(
-            final org.eclipse.microprofile.openapi.models.Components components, final APIResponse response,
+            final Supplier<org.eclipse.microprofile.openapi.models.Components> components, final APIResponse response,
             final Collection<String> defaultMediaTypes) {
         final APIResponseImpl impl = new APIResponseImpl();
         impl.description(response.description());
@@ -722,7 +725,7 @@ public class AnnotationProcessor {
 
     private org.eclipse.microprofile.openapi.models.parameters.RequestBody mapRequestBody(
             final String defaultContentType, final AnnotatedTypeElement param,
-            final org.eclipse.microprofile.openapi.models.Components components,
+            final Supplier<org.eclipse.microprofile.openapi.models.Components> components,
             final RequestBody requestBody) {
 
         final org.eclipse.microprofile.openapi.models.parameters.RequestBody impl = new RequestBodyImpl()
@@ -748,7 +751,7 @@ public class AnnotationProcessor {
         return impl;
     }
 
-    private MediaType mapContent(final org.eclipse.microprofile.openapi.models.Components components, final Content content) {
+    private MediaType mapContent(final Supplier<org.eclipse.microprofile.openapi.models.Components> components, final Content content) {
         final MediaTypeImpl impl = new MediaTypeImpl();
         if (content.encoding().length > 0) {
             Stream.of(content.encoding()).forEach(e -> impl.addEncoding(e.name(), mapEncoding(components, e)));
@@ -761,7 +764,7 @@ public class AnnotationProcessor {
         return impl;
     }
 
-    private Encoding mapEncoding(final org.eclipse.microprofile.openapi.models.Components components,
+    private Encoding mapEncoding(final Supplier<org.eclipse.microprofile.openapi.models.Components> components,
                                  final org.eclipse.microprofile.openapi.annotations.media.Encoding e) {
         final EncodingImpl impl = new EncodingImpl();
         impl.allowReserved(e.allowReserved());
@@ -779,10 +782,10 @@ public class AnnotationProcessor {
     }
 
     private org.eclipse.microprofile.openapi.models.headers.Header mapHeader(
-            final org.eclipse.microprofile.openapi.models.Components components, final Header header) {
+            final Supplier<org.eclipse.microprofile.openapi.models.Components> components, final Header header) {
         final String ref = header.ref();
         if (!ref.isEmpty()) {
-            final org.eclipse.microprofile.openapi.models.headers.Header headerRef = findHeaderByRef(components, ref);
+            final org.eclipse.microprofile.openapi.models.headers.Header headerRef = findHeaderByRef(components.get(), ref);
             final HeaderImpl impl = new HeaderImpl();
             impl.deprecated(headerRef.getDeprecated());
             impl.description(headerRef.getDescription());
@@ -803,7 +806,8 @@ public class AnnotationProcessor {
         return impl;
     }
 
-    private org.eclipse.microprofile.openapi.models.headers.Header findHeaderByRef(org.eclipse.microprofile.openapi.models.Components components, String ref) {
+    private org.eclipse.microprofile.openapi.models.headers.Header findHeaderByRef(
+            final org.eclipse.microprofile.openapi.models.Components components, final String ref) {
         if (ref.startsWith("#/components/headers/")) {
             return components.getHeaders().get(ref.substring("#/components/headers/".length()));
         } // else?
@@ -812,13 +816,24 @@ public class AnnotationProcessor {
     }
 
     private List<org.eclipse.microprofile.openapi.models.parameters.Parameter> mapParameters(
-            final org.eclipse.microprofile.openapi.models.Components components, final Parameter[] parameters) {
-        return Stream.of(parameters).map(it -> mapParameter(null, components, it)).collect(toList());
+            final OpenAPI openAPI, final Parameter[] parameters) {
+        return Stream.of(parameters)
+                .map(it -> mapParameter(null, () -> getOrCreateComponents(openAPI), it))
+                .collect(toList());
+    }
+
+    private org.eclipse.microprofile.openapi.models.Components getOrCreateComponents(final OpenAPI openAPI) {
+        org.eclipse.microprofile.openapi.models.Components components = openAPI.getComponents();
+        if (components == null) {
+            components = new ComponentsImpl();
+            openAPI.components(components);
+        }
+        return components;
     }
 
     private org.eclipse.microprofile.openapi.models.parameters.Parameter mapParameter(
             final AnnotatedTypeElement annotatedElement,
-            final org.eclipse.microprofile.openapi.models.Components components,
+            final Supplier<org.eclipse.microprofile.openapi.models.Components> components,
             final Parameter parameter) {
         final ParameterImpl impl = new ParameterImpl();
         impl.description(parameter.description());

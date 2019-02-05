@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.testng.Assert.assertEquals;
 
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.json.bind.annotation.JsonbProperty;
@@ -33,21 +34,21 @@ import org.testng.annotations.Test;
 public class SchemaProcessorTest {
     @Test
     public void mapImplicit() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), Data.class);
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), Data.class);
         assertEquals(1, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("name").getType());
     }
 
     @Test
     public void mapJsonb() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), JsonbData.class);
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), JsonbData.class);
         assertEquals(1, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("foo").getType());
     }
 
     @Test
     public void mapEnum() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(new ComponentsImpl(), DataWithEnum.class);
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), DataWithEnum.class);
         assertEquals(1, schema.getProperties().size());
         final Schema anEnum = schema.getProperties().get("anEnum");
         assertEquals(Schema.SchemaType.STRING, anEnum.getType());
@@ -57,7 +58,7 @@ public class SchemaProcessorTest {
     @Test
     public void cyclicRef() {
         final Components components = new ComponentsImpl();
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(components, SomeClass.class);
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClass.class);
         assertEquals(3, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("simple").getType());
         assertSomeClass(schema.getProperties().get("child"));
@@ -69,6 +70,11 @@ public class SchemaProcessorTest {
                 components.getSchemas().get("org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass");
         assertEquals(3, completeSchema.getProperties().size());
         assertEquals(Stream.of("simple", "child", "children").collect(toSet()), completeSchema.getProperties().keySet());
+    }
+
+    private Supplier<Components> newComponentsProvider() {
+        final ComponentsImpl components = new ComponentsImpl();
+        return () -> components;
     }
 
     private void assertSomeClass(final Schema schema) {

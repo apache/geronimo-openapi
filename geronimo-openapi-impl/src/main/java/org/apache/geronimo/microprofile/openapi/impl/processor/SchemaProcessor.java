@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.json.bind.annotation.JsonbProperty;
@@ -48,7 +49,7 @@ public class SchemaProcessor {
     private final Map<Class<?>, String> providedRefs = new HashMap<>();
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
-            final org.eclipse.microprofile.openapi.models.Components components, final Type model) {
+            final Supplier<Components> components, final Type model) {
         final org.eclipse.microprofile.openapi.models.media.Schema cached = cache.get(model);
         if (cached != null) {
             return new SchemaImpl().type(cached.getType()).ref(toRef(Class.class.cast(model), null));
@@ -70,7 +71,7 @@ public class SchemaProcessor {
     }
 
     public void fillSchema(
-            final org.eclipse.microprofile.openapi.models.Components components,
+            final Supplier<org.eclipse.microprofile.openapi.models.Components>components,
             final Type model,
             final org.eclipse.microprofile.openapi.models.media.Schema schema,
             final String providedRef) {
@@ -110,7 +111,7 @@ public class SchemaProcessor {
                         schema.ref(toRef(from, providedRef));
                     } else {
                         if (cache.putIfAbsent(from, schema) == null) {
-                            components.addSchema(toRefName(from, providedRef), schema);
+                            components.get().addSchema(toRefName(from, providedRef), schema);
                         }
 
                         schema.properties(new HashMap<>());
@@ -169,7 +170,7 @@ public class SchemaProcessor {
         }
     }
 
-    private org.eclipse.microprofile.openapi.models.media.Schema mapField(final Components components, final Field f) {
+    private org.eclipse.microprofile.openapi.models.media.Schema mapField(final Supplier<Components> components, final Field f) {
         final Schema annotation = f.getAnnotation(Schema.class);
         return ofNullable(annotation).map(s -> mapSchema(components, s, null)).orElseGet(() -> {
             final org.eclipse.microprofile.openapi.models.media.Schema schemaFromClass = mapSchemaFromClass(
@@ -193,7 +194,7 @@ public class SchemaProcessor {
                 });
     }
 
-    private void mergeSchema(final Components components,
+    private void mergeSchema(final Supplier<Components> components,
                              final org.eclipse.microprofile.openapi.models.media.Schema impl,
                              final Schema schema) {
         impl.deprecated(schema.deprecated());
@@ -279,7 +280,7 @@ public class SchemaProcessor {
     }
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchema(
-            final org.eclipse.microprofile.openapi.models.Components components, final Schema schema,
+            final Supplier<org.eclipse.microprofile.openapi.models.Components>components, final Schema schema,
             final String providedRefMapping) {
         if (schema.hidden() || (schema.implementation() == Void.class && schema.name().isEmpty() && schema.ref().isEmpty())) {
             if (schema.type() != SchemaType.DEFAULT) {
@@ -294,11 +295,11 @@ public class SchemaProcessor {
         return impl;
     }
 
-    private void sets(final Components components, final Schema schema,
+    private void sets(final Supplier<Components> components, final Schema schema,
             final org.eclipse.microprofile.openapi.models.media.Schema impl,
             final String providedRef) {
         if (!schema.ref().isEmpty()) {
-            impl.ref(resolveSchemaRef(components, schema.ref()));
+            impl.ref(resolveSchemaRef(schema.ref()));
         } else {
             if (schema.implementation() != Void.class) {
                 final boolean array = schema.type() == SchemaType.ARRAY;
@@ -314,7 +315,7 @@ public class SchemaProcessor {
         }
     }
 
-    private String resolveSchemaRef(final org.eclipse.microprofile.openapi.models.Components components, final String ref) {
+    private String resolveSchemaRef(final String ref) {
         if (ref.startsWith("#")) {
             return ref;
         }
