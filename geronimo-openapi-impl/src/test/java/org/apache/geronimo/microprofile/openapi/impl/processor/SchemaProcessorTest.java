@@ -61,12 +61,17 @@ public class SchemaProcessorTest {
         assertSomeClass(schema.getProperties().get("child"));
         final Schema children = schema.getProperties().get("children");
         assertEquals(Schema.SchemaType.ARRAY, children.getType());
-        assertSomeClass(children.getItems());
+        assertSomeRelatedClass(children.getItems());
     }
 
     private void assertSomeClass(final Schema schema) {
         assertEquals(Schema.SchemaType.OBJECT, schema.getType());
         assertEquals(Stream.of("simple", "child", "children").collect(toSet()), schema.getProperties().keySet());
+    }
+
+    private void assertSomeRelatedClass(final Schema schema) {
+        assertEquals(Schema.SchemaType.OBJECT, schema.getType());
+        assertEquals(Stream.of("simple", "children").collect(toSet()), schema.getProperties().keySet());
     }
 
     public enum AnEnum {
@@ -75,8 +80,13 @@ public class SchemaProcessorTest {
 
     public static class SomeClass {
         private String simple;
+        private List<SomeRelatedClass> children;
         private SomeClass child;
-        private List<SomeClass> children;
+    }
+
+    public static class SomeRelatedClass {
+        private String simple;
+        private List<SomeRelatedClass> children;
     }
 
     public static class DataWithEnum {
