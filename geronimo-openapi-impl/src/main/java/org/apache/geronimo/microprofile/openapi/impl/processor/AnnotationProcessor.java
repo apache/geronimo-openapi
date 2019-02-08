@@ -459,8 +459,7 @@ public class AnnotationProcessor {
                                     .name(annotatedElement.getAnnotation(QueryParam.class).value());
                         }
                         parameter.schema(schemaProcessor.mapSchemaFromClass(
-                                    () -> getOrCreateComponents(openAPI), annotatedElement.getType()))
-                                 .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE);
+                                    () -> getOrCreateComponents(openAPI), annotatedElement.getType()));
                         return parameter;
                     }
                     return null;
