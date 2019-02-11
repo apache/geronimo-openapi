@@ -446,16 +446,20 @@ public class AnnotationProcessor {
                         final ParameterImpl parameter = new ParameterImpl();
                         if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
                             parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER)
+                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
                                     .name(annotatedElement.getAnnotation(HeaderParam.class).value());
                         } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
                             parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE)
+                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
                                     .name(annotatedElement.getAnnotation(CookieParam.class).value());
                         } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
                             parameter.required(true)
                                     .in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH)
+                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
                                     .name(annotatedElement.getAnnotation(PathParam.class).value());
                         } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
                             parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
+                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
                                     .name(annotatedElement.getAnnotation(QueryParam.class).value());
                         }
                         parameter.schema(schemaProcessor.mapSchemaFromClass(
