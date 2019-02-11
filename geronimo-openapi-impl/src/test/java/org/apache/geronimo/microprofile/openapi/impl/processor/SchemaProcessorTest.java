@@ -72,6 +72,16 @@ public class SchemaProcessorTest {
         assertEquals(Stream.of("simple", "child", "children").collect(toSet()), completeSchema.getProperties().keySet());
     }
 
+    @Test
+    public void array() {
+        final Components components = new ComponentsImpl();
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassWithArray.class);
+        assertEquals(1, schema.getProperties().size());
+        final Schema array = schema.getProperties().get("thearray");
+        assertEquals(Schema.SchemaType.ARRAY, array.getType());
+        assertEquals(Schema.SchemaType.STRING, array.getItems().getType());
+    }
+
     private Supplier<Components> newComponentsProvider() {
         final ComponentsImpl components = new ComponentsImpl();
         return () -> components;
@@ -100,6 +110,10 @@ public class SchemaProcessorTest {
     public static class SomeRelatedClass {
         private String simple;
         private List<SomeRelatedClass> children;
+    }
+
+    public static class SomeClassWithArray {
+        private String[] thearray;
     }
 
     public static class DataWithEnum {

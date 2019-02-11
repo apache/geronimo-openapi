@@ -98,8 +98,13 @@ public class SchemaProcessor {
                 final Class from = Class.class.cast(model);
                 if (from.isEnum()) {
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING)
-                                 .enumeration(asList(from.getEnumConstants()))
-                                 .nullable(true);
+                          .enumeration(asList(from.getEnumConstants()))
+                          .nullable(true);
+                } else if (from.isArray()) {
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
+                    final SchemaImpl items = new SchemaImpl();
+                    fillSchema(components, from.getComponentType(), items, null);
+                    schema.items(items);
                 } else {
                     ofNullable(from.getAnnotation(Schema.class)).ifPresent(
                             s -> sets(components, Schema.class.cast(s), schema, null));
