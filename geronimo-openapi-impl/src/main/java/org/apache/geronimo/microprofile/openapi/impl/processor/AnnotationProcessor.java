@@ -59,7 +59,6 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import org.apache.cxf.jaxrs.ext.PATCH;
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
@@ -176,8 +175,6 @@ public class AnnotationProcessor {
                         getPathItem(api, completePath).setHEAD(buildOperation(api, m, annotatedType, "HEAD", completePath));
                     } else if (m.isAnnotationPresent(OPTIONS.class)) {
                         getPathItem(api, completePath).setOPTIONS(buildOperation(api, m, annotatedType, "OPTIONS", completePath));
-                    } else if (m.isAnnotationPresent(PATCH.class)) {
-                        getPathItem(api, completePath).setPATCH(buildOperation(api, m, annotatedType, "PATCH", completePath));
                     } else if (m.isAnnotationPresent(DELETE.class)) {
                         getPathItem(api, completePath).setDELETE(buildOperation(api, m, annotatedType, "DELETE", completePath));
                     } else {
@@ -186,7 +183,9 @@ public class AnnotationProcessor {
                             final String mtd = http.annotationType().getAnnotation(HttpMethod.class).value();
                             if ("TRACE".equals(mtd)) {
                                 getPathItem(api, completePath).setTRACE(buildOperation(api, m, annotatedType, mtd, completePath));
-                            } // else: how to map it???
+                            } else if ("PATCH".equals(mtd)) {
+                                getPathItem(api, completePath).setPATCH(buildOperation(api, m, annotatedType, mtd, completePath));
+                            } // else: how to map it
                         });
                     }
                 });

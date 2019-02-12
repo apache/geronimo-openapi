@@ -140,14 +140,14 @@
       <dependency>
         <groupId>org.apache.tomcat</groupId>
         <artifactId>tomcat-servlet-api</artifactId>
-        <version>9.0.10</version>
+        <version>9.0.16</version>
         <scope>provided</scope>
       </dependency>
 
       <dependency>
         <groupId>org.apache.cxf</groupId>
         <artifactId>cxf-integration-cdi</artifactId>
-        <version>3.2.7</version>
+        <version>3.3.0</version>
         <scope>provided</scope>
         <optional>true</optional>
         <exclusions>
@@ -166,6 +166,18 @@
           <exclusion>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>jakarta.activation</groupId>
+            <artifactId>jakarta.activation-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -206,7 +218,7 @@
       <dependency>
         <groupId>org.apache.meecrowave</groupId>
         <artifactId>meecrowave-arquillian</artifactId>
-        <version>1.2.5</version>
+        <version>1.2.6</version>
         <scope>test</scope>
         <exclusions>
           <exclusion>

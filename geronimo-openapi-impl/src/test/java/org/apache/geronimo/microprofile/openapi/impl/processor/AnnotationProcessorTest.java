@@ -27,6 +27,7 @@ import org.eclipse.microprofile.openapi.models.parameters.Parameter;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.GET;
+import javax.ws.rs.PATCH;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -79,6 +80,26 @@ public class AnnotationProcessorTest {
         annotationProcessor.processClass("", openAPI, new ClassElement(RootPath.class),
                 Stream.of(RootPath.class.getMethods()).map(MethodElement::new));
         assertNotNull(openAPI.getPaths().get("/{a}").getGET().getOperationId()); // we didn't get an index exception
+    }
+
+    @Test
+    public void patch() {
+        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default());
+        final OpenAPI openAPI = new OpenAPIImpl();
+        annotationProcessor.processClass("", openAPI, new ClassElement(Patched.class),
+                Stream.of(Patched.class.getMethods()).map(MethodElement::new));
+        assertNotNull(openAPI.getPaths().get("/{a}").getPATCH().getOperationId()); // we didn't get an index exception
+    }
+
+    @Path("/")
+    public class Patched {
+
+        @PATCH
+        @Path("/{a}")
+        @Produces(MediaType.TEXT_PLAIN)
+        public String hello(final String foo) {
+            return null;
+        }
     }
 
     @Path("/")

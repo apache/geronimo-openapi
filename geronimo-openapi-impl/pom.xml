@@ -117,12 +117,15 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.0</version>
+        <version>3.0.0-M3</version>
         <configuration>
           <trimStackTrace>false</trimStackTrace>
           <dependenciesToScan>
             <dependency>org.eclipse.microprofile.openapi:microprofile-openapi-tck</dependency>
           </dependenciesToScan>
+          <classpathDependencyExcludes>
+            <classpathDependencyExclude>org.apache.geronimo.specs:geronimo-jaxrs_2.0_spec</classpathDependencyExclude>
+          </classpathDependencyExcludes>
         </configuration>
       </plugin>
       <plugin>
