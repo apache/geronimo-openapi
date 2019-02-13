@@ -268,7 +268,7 @@ public class AnnotationProcessor {
 
         of(m.getAnnotationsByType(Callback.class)).filter(it -> it.length > 0).ifPresent(cbs -> {
             final Map<String, org.eclipse.microprofile.openapi.models.callbacks.Callback> callbacks = Stream.of(cbs)
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()),
                             it -> mapCallback(api, it)));
             operation.callbacks(callbacks);
         });
@@ -492,44 +492,44 @@ public class AnnotationProcessor {
         if (components.schemas().length > 0) {
             impl.schemas(Stream.of(components.schemas())
                                .map(it -> {
-                                   final String ref = of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref);
+                                   final String ref = of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref());
                                    return new SchemaWithRef(ref, mapSchema(api, it, ref));
                                })
                                .collect(toMap(it -> it.ref, it -> it.schema)));
         }
         if (components.links().length > 0) {
             impl.links(Stream.of(components.links()).collect(
-                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapLink)));
+                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()), this::mapLink)));
         }
         if (components.securitySchemes().length > 0) {
             impl.securitySchemes(Stream.of(components.securitySchemes())
                     .collect(toMap(
-                            it -> of(it.securitySchemeName()).filter(v -> !v.isEmpty()).orElseGet(it::ref),
+                            it -> of(it.securitySchemeName()).filter(v -> !v.isEmpty()).orElseGet(() -> it.ref()),
                             this::mapSecurityScheme)));
         }
         if (components.requestBodies().length > 0) {
             impl.requestBodies(Stream.of(components.requestBodies())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()),
                             it -> mapRequestBody(null, null, () -> impl, it))));
         }
         if (components.parameters().length > 0) {
             impl.parameters(Stream.of(components.parameters())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()),
                             it -> mapParameter(null, () -> impl, it))));
         }
         if (components.headers().length > 0) {
             impl.headers(Stream.of(components.headers())
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()),
                             it -> mapHeader(() -> impl, it))));
         }
         if (components.examples().length > 0) {
             impl.examples(Stream.of(components.examples()).collect(toMap(
-                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
+                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()), this::mapExample)));
         }
         if (components.responses().length > 0) {
             final APIResponses responses = new APIResponsesImpl();
             responses.putAll(Stream.of(components.responses())
-                    .collect(toMap(it -> of(it.name()).filter(c -> !c.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(c -> !c.isEmpty()).orElseGet(() -> it.ref()),
                             it -> mapResponse(() -> impl, it, null), (a, b) -> b)));
             impl.responses(responses);
         }
@@ -616,7 +616,7 @@ public class AnnotationProcessor {
     private void processCallbacks(final OpenAPI api, final Callback[] callbacks) {
         if (callbacks.length > 0) {
             getOrCreateComponents(api).setCallbacks(Stream.of(callbacks)
-                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref),
+                    .collect(toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()),
                             it -> mapCallback(api, it))));
         }
     }
@@ -707,7 +707,7 @@ public class AnnotationProcessor {
         }
         if (response.links().length > 0) {
             impl.links(Stream.of(response.links()).collect(
-                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapLink)));
+                    toMap(it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()), this::mapLink)));
         }
         return impl;
     }
@@ -761,7 +761,7 @@ public class AnnotationProcessor {
         impl.setSchema(schemaProcessor.mapSchema(components, content.schema(), null));
         if (content.examples().length > 0) {
             impl.examples(Stream.of(content.examples()).collect(toMap(
-                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
+                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()), this::mapExample)));
         }
         return impl;
     }
@@ -877,7 +877,7 @@ public class AnnotationProcessor {
         of(parameter.example()).filter(v -> !v.isEmpty()).ifPresent(impl::example);
         if (parameter.examples().length > 0) {
             impl.examples(Stream.of(parameter.examples()).collect(toMap(
-                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(it::ref), this::mapExample)));
+                    it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()), this::mapExample)));
         }
         if (annotatedElement != null) {
             if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
