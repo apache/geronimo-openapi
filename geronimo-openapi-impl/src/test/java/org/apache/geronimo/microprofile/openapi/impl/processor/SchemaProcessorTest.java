@@ -20,6 +20,7 @@ import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
 import static org.testng.Assert.assertEquals;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -82,6 +83,24 @@ public class SchemaProcessorTest {
         assertEquals(Schema.SchemaType.STRING, array.getItems().getType());
     }
 
+    @Test
+    public void clazz() {
+        final Components components = new ComponentsImpl();
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassField.class);
+        assertEquals(schema.getProperties().size(), 1);
+        final Schema field = schema.getProperties().get("clazz");
+        assertEquals(Schema.SchemaType.STRING, field.getType());
+    }
+
+    @Test
+    public void type() {
+        final Components components = new ComponentsImpl();
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeTypeField.class);
+        assertEquals(schema.getProperties().size(), 1);
+        final Schema field = schema.getProperties().get("type");
+        assertEquals(Schema.SchemaType.STRING, field.getType());
+    }
+
     private Supplier<Components> newComponentsProvider() {
         final ComponentsImpl components = new ComponentsImpl();
         return () -> components;
@@ -101,31 +120,39 @@ public class SchemaProcessorTest {
         A, B
     }
 
+    public static class SomeTypeField {
+        protected Type type;
+    }
+
+    public static class SomeClassField {
+        protected Class<?> clazz;
+    }
+
     public static class SomeClass {
-        private String simple;
-        private List<SomeRelatedClass> children;
-        private SomeClass child;
+        protected String simple;
+        protected List<SomeRelatedClass> children;
+        protected SomeClass child;
     }
 
     public static class SomeRelatedClass {
-        private String simple;
-        private List<SomeRelatedClass> children;
+        protected String simple;
+        protected List<SomeRelatedClass> children;
     }
 
     public static class SomeClassWithArray {
-        private String[] thearray;
+        protected String[] thearray;
     }
 
     public static class DataWithEnum {
-        private AnEnum anEnum;
+        protected AnEnum anEnum;
     }
 
     public static class Data {
-        private String name;
+        protected String name;
     }
 
     public static class JsonbData {
         @JsonbProperty("foo")
-        private String name;
+        protected String name;
     }
 }

@@ -22,15 +22,21 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -72,9 +78,10 @@ public class SchemaProcessor {
 
     public void fillSchema(
             final Supplier<org.eclipse.microprofile.openapi.models.Components>components,
-            final Type model,
+            final Type rawModel,
             final org.eclipse.microprofile.openapi.models.media.Schema schema,
             final String providedRef) {
+        final Type model = unwrapType(rawModel);
         if (Class.class.isInstance(model)) {
             if (boolean.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN);
@@ -105,6 +112,11 @@ public class SchemaProcessor {
                     final SchemaImpl items = new SchemaImpl();
                     fillSchema(components, from.getComponentType(), items, null);
                     schema.items(items);
+                } else if (Collection.class.isAssignableFrom(from)) {
+                    schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
+                    final SchemaImpl items = new SchemaImpl();
+                    fillSchema(components, Object.class, items, null);
+                    schema.items(items);
                 } else {
                     ofNullable(from.getAnnotation(Schema.class)).ifPresent(
                             s -> sets(components, Schema.class.cast(s), schema, null));
@@ -121,17 +133,23 @@ public class SchemaProcessor {
 
                         schema.properties(new HashMap<>());
                         Class<?> current = from;
-                        // todo: use getters first then fields, for JSON-B the private only fields must be ignored
                         while (current != null && current != Object.class) {
                             Stream.of(current.getDeclaredFields())
-                                  .filter(f -> {
-                                      final boolean explicit = f.isAnnotationPresent(Schema.class);
-                                      return !explicit || !f.getAnnotation(Schema.class).hidden();
-                                  })
-                                  .peek(f -> handleRequired(schema, f))
+                                  .filter(it -> isVisible(it, it.getModifiers()))
+                                  .peek(f -> handleRequired(schema, f, () -> findFieldName(f)))
                                   .forEach(f -> {
                                       final String fieldName = findFieldName(f);
-                                      schema.getProperties().put(fieldName, mapField(components, f));
+                                      schema.getProperties().put(fieldName, mapField(components, f, f.getGenericType()));
+                                  });
+                            Stream.of(current.getDeclaredMethods())
+                                  .filter(it -> isVisible(it, it.getModifiers()))
+                                  .filter(it -> (it.getName().startsWith("get") || it.getName().startsWith("is")) && it.getName().length() > 2)
+                                  .peek(m -> handleRequired(schema, m, () -> findMethodName(m)))
+                                  .forEach(m -> {
+                                      final String key = findMethodName(m);
+                                      if (!schema.getProperties().containsKey(key)) {
+                                          schema.getProperties().put(key, mapField(components, m, m.getGenericReturnType()));
+                                      }
                                   });
                             current = current.getSuperclass();
                         }
@@ -158,28 +176,47 @@ public class SchemaProcessor {
         }
     }
 
-    private boolean isStringable(final Type model) {
-        return Date.class == model || model.getTypeName().startsWith("java.time.");
+    private boolean isVisible(final AnnotatedElement elt, final int modifiers) {
+        final boolean explicit = elt.isAnnotationPresent(Schema.class);
+        if (!explicit || !elt.getAnnotation(Schema.class).hidden()) {
+            return (!Modifier.isPrivate(modifiers) || elt.isAnnotationPresent(Schema.class)) && !Modifier.isStatic(modifiers);
+        }
+        return false;
     }
 
-    private void handleRequired(final org.eclipse.microprofile.openapi.models.media.Schema schema, final Field f) {
-        if (!f.isAnnotationPresent(Schema.class) || !f.getAnnotation(Schema.class).required()) {
+    private Type unwrapType(final Type rawModel) {
+        if (ParameterizedType.class.isInstance(rawModel) &&
+                Stream.of(ParameterizedType.class.cast(rawModel).getActualTypeArguments()).allMatch(WildcardType.class::isInstance)) {
+            return ParameterizedType.class.cast(rawModel).getRawType();
+        }
+        return rawModel;
+    }
+
+    private boolean isStringable(final Type model) {
+        return Date.class == model || model.getTypeName().startsWith("java.time.") || Class.class == model || Type.class == model;
+    }
+
+    private void handleRequired(final org.eclipse.microprofile.openapi.models.media.Schema schema,
+                                final AnnotatedElement element, final Supplier<String> nameSupplier) {
+        if (!element.isAnnotationPresent(Schema.class) || !element.getAnnotation(Schema.class).required()) {
             return;
         }
         if (schema.getRequired() == null) {
             schema.required(new ArrayList<>());
         }
-        final String name = findFieldName(f);
+        final String name = nameSupplier.get();
         if (!schema.getRequired().contains(name)) {
             schema.getRequired().add(name);
         }
     }
 
-    private org.eclipse.microprofile.openapi.models.media.Schema mapField(final Supplier<Components> components, final Field f) {
-        final Schema annotation = f.getAnnotation(Schema.class);
+    private org.eclipse.microprofile.openapi.models.media.Schema mapField(final Supplier<Components> components,
+                                                                          final AnnotatedElement element,
+                                                                          final Type type) {
+        final Schema annotation = element.getAnnotation(Schema.class);
         return ofNullable(annotation).map(s -> mapSchema(components, s, null)).orElseGet(() -> {
             final org.eclipse.microprofile.openapi.models.media.Schema schemaFromClass = mapSchemaFromClass(
-                    components, f.getGenericType());
+                    components, type);
             if (annotation != null) {
                 mergeSchema(components, schemaFromClass, annotation);
             }
@@ -188,15 +225,57 @@ public class SchemaProcessor {
     }
 
     private String findFieldName(final Field f) {
-        return ofNullable(f.getAnnotation(Schema.class))
-                .map(Schema::name)
-                .filter(it -> !it.isEmpty())
+        return findSchemaName(f)
                 .orElseGet(() -> {
-                    if (f.isAnnotationPresent(JsonbProperty.class)) { // todo: test getter too
+                    if (f.isAnnotationPresent(JsonbProperty.class)) {
                         return f.getAnnotation(JsonbProperty.class).value();
                     }
-                    return f.getName();
+                    // getter
+                    final String fName = f.getName();
+                    final String subName = Character.toUpperCase(fName.charAt(0))
+                            + (fName.length() > 1 ? fName.substring(1) : "");
+                    try {
+                        final Method getter = f.getDeclaringClass().getMethod("get" + subName);
+                        if (getter.isAnnotationPresent(JsonbProperty.class)) {
+                            return getter.getAnnotation(JsonbProperty.class).value();
+                        }
+                    } catch (final NoSuchMethodException e) {
+                        if (boolean.class == f.getType()) {
+                            try {
+                                final Method isser = f.getDeclaringClass().getMethod("is" + subName);
+                                if (isser.isAnnotationPresent(JsonbProperty.class)) {
+                                    return isser.getAnnotation(JsonbProperty.class).value();
+                                }
+                            } catch (final NoSuchMethodException e2) {
+                                // no-op
+                            }
+                        }
+                    }
+                    return fName;
                 });
+    }
+
+    private String findMethodName(final Method m) {
+        return findSchemaName(m)
+                .orElseGet(() -> {
+                    if (m.isAnnotationPresent(JsonbProperty.class)) {
+                        return m.getAnnotation(JsonbProperty.class).value();
+                    }
+                    final String name = m.getName();
+                    if (name.startsWith("get")) {
+                        return name.substring("get".length());
+                    }
+                    if (name.startsWith("is")) {
+                        return name.substring("is".length());
+                    }
+                    return name;
+                });
+    }
+
+    private Optional<String> findSchemaName(final AnnotatedElement m) {
+        return ofNullable(m.getAnnotation(Schema.class))
+                .map(Schema::name)
+                .filter(it -> !it.isEmpty());
     }
 
     private void mergeSchema(final Supplier<Components> components,
