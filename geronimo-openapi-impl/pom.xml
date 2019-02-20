@@ -110,10 +110,37 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.openjpa</groupId>
+      <artifactId>openjpa</artifactId>
+      <version>${openjpa.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
+
+  <properties>
+    <openjpa.version>3.0.0</openjpa.version>
+  </properties>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.openjpa</groupId>
+        <artifactId>openjpa-maven-plugin</artifactId>
+        <version>${openjpa.version}</version>
+        <executions>
+          <execution>
+            <id>enhance-test-classes</id>
+            <goals>
+              <goal>test-enhance</goal>
+            </goals>
+            <configuration>
+              <persistenceXmlFile>${project.basedir}/src/test/resources/META-INF/persistence.xml</persistenceXmlFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>

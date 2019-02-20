@@ -759,4 +759,9 @@ public class SchemaImpl implements Schema {
         setXml(_xml);
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "SchemaImpl{properties=" + _properties + ", type=" + _type + '}';
+    }
 }

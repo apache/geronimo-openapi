@@ -16,6 +16,7 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
+import static java.beans.Introspector.decapitalize;
 import static java.util.Arrays.asList;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
@@ -37,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -53,6 +55,18 @@ import org.eclipse.microprofile.openapi.models.Components;
 public class SchemaProcessor {
     private final Map<Type, org.eclipse.microprofile.openapi.models.media.Schema> cache = new HashMap<>();
     private final Map<Class<?>, String> providedRefs = new HashMap<>();
+    private final Class<?> persistenceCapable;
+
+    public SchemaProcessor() {
+        Class<?> pc = null;
+        try {
+            pc = Thread.currentThread().getContextClassLoader()
+                    .loadClass("org.apache.openjpa.enhance.PersistenceCapable");
+        } catch (final NoClassDefFoundError | ClassNotFoundException e) {
+            // no-op
+        }
+        persistenceCapable = pc;
+    }
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
             final Supplier<Components> components, final Type model) {
@@ -131,6 +145,8 @@ public class SchemaProcessor {
                             components.get().addSchema(toRefName(from, providedRef), schema);
                         }
 
+                        final Predicate<String> ignored = createIgnorePredicate(from);
+
                         schema.properties(new HashMap<>());
                         Class<?> current = from;
                         while (current != null && current != Object.class) {
@@ -139,7 +155,9 @@ public class SchemaProcessor {
                                   .peek(f -> handleRequired(schema, f, () -> findFieldName(f)))
                                   .forEach(f -> {
                                       final String fieldName = findFieldName(f);
-                                      schema.getProperties().put(fieldName, mapField(components, f, f.getGenericType()));
+                                      if (!ignored.test(fieldName)) {
+                                          schema.getProperties().put(fieldName, mapField(components, f, f.getGenericType()));
+                                      }
                                   });
                             Stream.of(current.getDeclaredMethods())
                                   .filter(it -> isVisible(it, it.getModifiers()))
@@ -147,7 +165,7 @@ public class SchemaProcessor {
                                   .peek(m -> handleRequired(schema, m, () -> findMethodName(m)))
                                   .forEach(m -> {
                                       final String key = findMethodName(m);
-                                      if (!schema.getProperties().containsKey(key)) {
+                                      if (!ignored.test(key) && !schema.getProperties().containsKey(key)) {
                                           schema.getProperties().put(key, mapField(components, m, m.getGenericReturnType()));
                                       }
                                   });
@@ -174,6 +192,11 @@ public class SchemaProcessor {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
             }
         }
+    }
+
+    private Predicate<String> createIgnorePredicate(final Class from) {
+        return persistenceCapable != null && persistenceCapable.isAssignableFrom(from) ?
+                v -> v.startsWith("pc") : v -> false;
     }
 
     private boolean isVisible(final AnnotatedElement elt, final int modifiers) {
@@ -263,12 +286,12 @@ public class SchemaProcessor {
                     }
                     final String name = m.getName();
                     if (name.startsWith("get")) {
-                        return name.substring("get".length());
+                        return decapitalize(name.substring("get".length()));
                     }
                     if (name.startsWith("is")) {
-                        return name.substring("is".length());
+                        return decapitalize(name.substring("is".length()));
                     }
-                    return name;
+                    return decapitalize(name);
                 });
     }
 

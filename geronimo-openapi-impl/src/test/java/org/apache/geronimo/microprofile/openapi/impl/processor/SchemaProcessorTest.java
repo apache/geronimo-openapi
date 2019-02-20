@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import javax.json.bind.annotation.JsonbProperty;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
+import org.apache.geronimo.microprofile.openapi.openjpa.Entity1;
 import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.testng.annotations.Test;
@@ -99,6 +100,17 @@ public class SchemaProcessorTest {
         assertEquals(schema.getProperties().size(), 1);
         final Schema field = schema.getProperties().get("type");
         assertEquals(Schema.SchemaType.STRING, field.getType());
+    }
+
+    @Test
+    public void openjpa() {
+        final Components components = new ComponentsImpl();
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, Entity1.class);
+        assertEquals(schema.getProperties().size(), 4);
+        assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("string").getType());
+        assertEquals(Schema.SchemaType.INTEGER, schema.getProperties().get("id").getType());
+        assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("date").getType());
+        assertEquals(Schema.SchemaType.ARRAY, schema.getProperties().get("relationship").getType());
     }
 
     private Supplier<Components> newComponentsProvider() {
