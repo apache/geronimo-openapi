@@ -23,8 +23,8 @@ import static javax.ws.rs.core.MediaType.WILDCARD_TYPE;
 import java.lang.annotation.Annotation;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Priority;
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 import javax.ws.rs.HttpMethod;
@@ -59,6 +59,11 @@ public class OpenAPIFilter implements ContainerRequestFilter {
 
     private OpenAPI openApi;
     private MediaType defaultMediaType;
+
+    @PostConstruct
+    private void init() {
+        defaultMediaType = defaultMediaType == null ? extension.getDefaultMediaType() : defaultMediaType;
+    }
 
     @Override
     public void filter(final ContainerRequestContext rc) {

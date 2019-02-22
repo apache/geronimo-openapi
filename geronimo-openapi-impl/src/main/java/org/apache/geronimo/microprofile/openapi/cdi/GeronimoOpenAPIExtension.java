@@ -33,7 +33,6 @@ import java.util.stream.Stream;
 
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.spi.AfterDeploymentValidation;
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.Bean;
@@ -57,7 +56,6 @@ import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotatedTypeElem
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
 import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.apache.geronimo.microprofile.openapi.jaxrs.JacksonOpenAPIYamlBodyWriter;
-import org.apache.geronimo.microprofile.openapi.jaxrs.OpenAPIFilter;
 import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.OASFilter;
 import org.eclipse.microprofile.openapi.OASModelReader;
@@ -94,6 +92,10 @@ public class GeronimoOpenAPIExtension implements Extension {
         }
     }
 
+    public MediaType getDefaultMediaType() {
+        return jacksonIsPresent ? new MediaType("text", "vnd.yaml") : APPLICATION_JSON_TYPE;
+    }
+
     private NamingStrategy loadNamingStrategy(final GeronimoOpenAPIConfig config) {
         return ofNullable(config.read("model.operation.naming.strategy", null))
                 .map(String::trim)
@@ -124,14 +126,6 @@ public class GeronimoOpenAPIExtension implements Extension {
                 (packages == null || packages.stream().anyMatch(typeName::startsWith))) {
             endpoints.add(event.getBean());
         }
-    }
-
-    void afterValidation(@Observes final AfterDeploymentValidation validation,
-                         final BeanManager beanManager) {
-        final OpenAPIFilter filter = OpenAPIFilter.class.cast(
-                beanManager.getReference(beanManager.resolve(beanManager.getBeans(OpenAPIFilter.class)),
-                        OpenAPIFilter.class, beanManager.createCreationalContext(null)));
-        filter.setDefaultMediaType(jacksonIsPresent ? new MediaType("text", "vnd.yaml") : APPLICATION_JSON_TYPE);
     }
 
     public OpenAPI getOrCreateOpenAPI(final Application application) {

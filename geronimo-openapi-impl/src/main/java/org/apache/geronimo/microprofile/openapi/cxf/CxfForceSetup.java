@@ -16,11 +16,17 @@
  */
 package org.apache.geronimo.microprofile.openapi.cxf;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+
+import java.util.logging.Logger;
+
 import javax.enterprise.inject.Vetoed;
 import javax.enterprise.inject.spi.CDI;
 
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.ext.JAXRSServerFactoryCustomizationExtension;
+import org.apache.geronimo.microprofile.openapi.cdi.GeronimoOpenAPIExtension;
+import org.apache.geronimo.microprofile.openapi.jaxrs.JacksonOpenAPIYamlBodyWriter;
 import org.apache.geronimo.microprofile.openapi.jaxrs.OpenAPIFilter;
 
 @Vetoed
@@ -30,6 +36,15 @@ public class CxfForceSetup implements JAXRSServerFactoryCustomizationExtension {
         if (bean.getProviders().stream().anyMatch(OpenAPIFilter.class::isInstance)) { // default app, nothing to do
             return;
         }
-        bean.setProvider(CDI.current().select(OpenAPIFilter.class).get());
+        final CDI<Object> current = CDI.current();
+        bean.setProvider(current.select(OpenAPIFilter.class).get());
+        try {
+            if (current.select(GeronimoOpenAPIExtension.class).get().getDefaultMediaType().equals(APPLICATION_JSON_TYPE)) {
+                return;
+            }
+            bean.setProvider(current.select(JacksonOpenAPIYamlBodyWriter.class).get());
+        } catch (final NoClassDefFoundError | RuntimeException cne) {
+            Logger.getLogger(CxfForceSetup.class.getName()).warning(cne.getMessage());
+        }
     }
 }
