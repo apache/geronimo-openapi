@@ -61,6 +61,7 @@ public class AnnotationProcessorTest {
         final Map<NamingStrategy, String> expectations = new HashMap<>();
         expectations.put(new NamingStrategy.Default(), "hello");
         expectations.put(new NamingStrategy.Qualified(), "org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessorTest$TestResource.hello");
+        expectations.put(new NamingStrategy.SimpleQualified(), "TestResource.hello");
         expectations.put(new NamingStrategy.Http(), "GET:/test/{a}");
 
         final GeronimoOpenAPIConfig config = (value, def) -> null;

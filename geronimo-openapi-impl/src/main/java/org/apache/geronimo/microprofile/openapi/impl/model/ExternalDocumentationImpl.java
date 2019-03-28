@@ -17,6 +17,7 @@
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
 import java.util.Map;
+import java.util.Objects;
 
 import javax.enterprise.inject.Vetoed;
 
@@ -77,5 +78,23 @@ public class ExternalDocumentationImpl implements ExternalDocumentation {
     public ExternalDocumentation url(final String _url) {
         setUrl(_url);
         return this;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final ExternalDocumentationImpl that = ExternalDocumentationImpl.class.cast(o);
+        return Objects.equals(_extensible, that._extensible) && Objects.equals(_description,
+                that._description) && Objects.equals(_url, that._url);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(_extensible, _description, _url);
     }
 }

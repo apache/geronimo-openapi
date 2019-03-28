@@ -211,7 +211,12 @@ public class OpenAPIImpl implements OpenAPI {
 
     @Override
     public OpenAPI addTag(final Tag _tags) {
-        (this._tags = this._tags == null ? new ArrayList<>() : this._tags).add(_tags);
+        if (this._tags == null) {
+            this._tags = new ArrayList<>();
+        }
+        if (!this._tags.contains(_tags)) {
+            this._tags.add(_tags);
+        }
         return this;
     }
 

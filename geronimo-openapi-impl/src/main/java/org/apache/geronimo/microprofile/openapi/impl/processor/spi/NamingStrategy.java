@@ -54,6 +54,13 @@ public interface NamingStrategy {
         }
     }
 
+    class SimpleQualified implements NamingStrategy {
+        @Override
+        public String name(final Context ctx) {
+            return ctx.method.getDeclaringClass().getSimpleName() + '.' + ctx.method.getName();
+        }
+    }
+
     class Qualified implements NamingStrategy {
         @Override
         public String name(final Context ctx) {
