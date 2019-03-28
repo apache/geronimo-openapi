@@ -17,6 +17,7 @@
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
 import java.util.Map;
+import java.util.Objects;
 
 import javax.enterprise.inject.Vetoed;
 
@@ -96,5 +97,24 @@ public class TagImpl implements Tag {
     public Tag name(final String _name) {
         setName(_name);
         return this;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final TagImpl tag = TagImpl.class.cast(o);
+        return Objects.equals(_extensible, tag._extensible) && Objects.equals(_description,
+                tag._description) && Objects.equals(_externalDocs, tag._externalDocs) && Objects.equals(_name,
+                tag._name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(_extensible, _description, _externalDocs, _name);
     }
 }

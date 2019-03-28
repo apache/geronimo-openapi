@@ -18,6 +18,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.enterprise.inject.Vetoed;
 
@@ -42,5 +43,21 @@ public class ExtensibleImpl implements Extensible {
     public void addExtension(final String key, final Object _extensions) {
         (this._extensions = this._extensions == null ? new LinkedHashMap<>() : this._extensions)
                 .put((key.startsWith("x-") ? key : ("x-" + key)), _extensions);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        return Objects.equals(_extensions, ExtensibleImpl.class.cast(o)._extensions);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(_extensions);
     }
 }
