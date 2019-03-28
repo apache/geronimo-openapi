@@ -61,6 +61,14 @@ public interface NamingStrategy {
         }
     }
 
+    class SimpleQualifiedCamelCase implements NamingStrategy {
+        @Override
+        public String name(final Context ctx) {
+            final String method = ctx.method.getName();
+            return ctx.method.getDeclaringClass().getSimpleName() + Character.toUpperCase(method.charAt(0)) + method.substring(1);
+        }
+    }
+
     class Qualified implements NamingStrategy {
         @Override
         public String name(final Context ctx) {
