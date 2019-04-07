@@ -59,6 +59,7 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.apache.cxf.common.util.StringUtils;
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
@@ -881,16 +882,30 @@ public class AnnotationProcessor {
         }
         if (annotatedElement != null) {
             if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
+                final HeaderParam annotation = annotatedElement.getAnnotation(HeaderParam.class);
                 impl.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER);
+                mapParameterName(impl, annotation.value());
             } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
+                final CookieParam annotation = annotatedElement.getAnnotation(CookieParam.class);
                 impl.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE);
+                mapParameterName(impl, annotation.value());
             } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
+                final PathParam annotation = annotatedElement.getAnnotation(PathParam.class);
                 impl.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH);
+                mapParameterName(impl, annotation.value());
             } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
+                final QueryParam annotation = annotatedElement.getAnnotation(QueryParam.class);
                 impl.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY);
+                mapParameterName(impl, annotation.value());
             }
         }
         return impl;
+    }
+
+    private void mapParameterName(final ParameterImpl impl, final String name) {
+        if (StringUtils.isEmpty(impl.getName()) && !StringUtils.isEmpty(name)) {
+            impl.name(name);
+        }
     }
 
     private Example mapExample(final ExampleObject exampleObject) {

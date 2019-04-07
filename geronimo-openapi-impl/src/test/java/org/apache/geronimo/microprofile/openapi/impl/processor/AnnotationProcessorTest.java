@@ -31,6 +31,7 @@ import javax.ws.rs.PATCH;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import java.util.HashMap;
@@ -53,7 +54,21 @@ public class AnnotationProcessorTest {
         assertNotNull(pathItem);
         List<Parameter> parameters = pathItem.getGET().getParameters();
         assertEquals(Parameter.In.PATH, parameters.get(0).getIn());
+        assertEquals("a", parameters.get(0).getName());
         // TODO add more assertions
+    }
+    
+    @Test
+    public void ensureParameterAnnotationsAreMerged() {
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        OpenAPI openAPI = new OpenAPIImpl();
+        annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
+                Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
+        PathItem pathItem = openAPI.getPaths().get("/test/bye");
+        assertNotNull(pathItem);
+        List<Parameter> parameters = pathItem.getGET().getParameters();
+        assertEquals(Parameter.In.QUERY, parameters.get(0).getIn());
+        assertEquals("b", parameters.get(0).getName());
     }
 
     @Test
@@ -123,6 +138,12 @@ public class AnnotationProcessorTest {
         @Produces(MediaType.TEXT_PLAIN)
         public String hello(@PathParam("a") String a) {
             return "hello";
+        }
+        
+        @GET
+        @Path("/bye")
+        @Produces(MediaType.TEXT_PLAIN)
+        public void bye(@org.eclipse.microprofile.openapi.annotations.parameters.Parameter(required = true) @QueryParam("b") String b) {
         }
     }
 }
