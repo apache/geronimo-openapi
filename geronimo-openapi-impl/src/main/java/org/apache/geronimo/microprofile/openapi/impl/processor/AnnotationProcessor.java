@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
@@ -307,10 +308,17 @@ public class AnnotationProcessor {
                      .filter(v -> !v.isEmpty())
                      .collect(toList()))
                 .ifPresent(operation::tags);
+        
+        final Collection<APIResponse> apiResponses = Stream
+            .concat(
+                Stream.of(m.getAnnotationsByType(APIResponse.class)),
+                Stream.of(m.getAnnotationsByType(org.eclipse.microprofile.openapi.annotations.responses.APIResponses.class))
+                    .flatMap(a -> Stream.of(a.value())))
+            .collect(Collectors.toList());
 
-        of(m.getAnnotationsByType(APIResponse.class)).filter(s -> s.length > 0).ifPresent(items -> {
+        if (!apiResponses.isEmpty()) {
             final APIResponses responses = new APIResponsesImpl();
-            responses.putAll(Stream.of(items).collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
+            responses.putAll(apiResponses.stream().collect(toMap(it -> of(it.responseCode()).filter(c -> !c.isEmpty()).orElse("200"),
                     it -> mapResponse(() -> getOrCreateComponents(api), it, produces.orElse(null)), (a, b) -> b)));
             responses.values().stream()
                      .filter(it -> it.getContent() == null || it.getContent().isEmpty() ||
@@ -358,7 +366,8 @@ public class AnnotationProcessor {
                      .forEach(resp -> ofNullable(resp.getContent().remove(""))
                              .ifPresent(updated -> produces.ifPresent(mt -> mt.forEach(type -> resp.getContent().put(type, updated)))));
             operation.responses(responses);
-        });
+        }
+        
         operation.parameters(Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameter.class) || hasJaxRsParams(it))
                 .map(it -> buildParameter(it, api)
