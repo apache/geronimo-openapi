@@ -59,7 +59,6 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import org.apache.cxf.common.util.StringUtils;
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
@@ -903,7 +902,7 @@ public class AnnotationProcessor {
     }
 
     private void mapParameterName(final ParameterImpl impl, final String name) {
-        if (StringUtils.isEmpty(impl.getName()) && !StringUtils.isEmpty(name)) {
+        if (impl.getName() == null || impl.getName().isEmpty()) {
             impl.name(name);
         }
     }
