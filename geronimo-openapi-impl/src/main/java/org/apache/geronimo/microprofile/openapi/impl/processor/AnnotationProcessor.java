@@ -320,12 +320,11 @@ public class AnnotationProcessor {
                          if (returnType == void.class || returnType == Response.class) {
                              if (v.getContent() == null || v.getContent().isEmpty()) {
                                  final ContentImpl content = new ContentImpl();
-                                 if (Response.class == returnType ||
-                                         Stream.of(m.getParameters()).anyMatch(it -> it.isAnnotationPresent(Suspended.class))) {
-                                     content.put("200", new MediaTypeImpl());
-                                 } else {
-                                     content.put("204", new MediaTypeImpl());
-                                 }
+
+                                 produces
+                                     .orElseGet(() -> singletonList("*/*"))
+                                     .forEach(mt -> content.put(mt, new MediaTypeImpl()));
+                                 
                                  v.content(content);
                              }
                              return;
