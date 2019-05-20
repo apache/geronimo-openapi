@@ -21,6 +21,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
@@ -61,6 +62,7 @@ public class HeaderImpl implements Header {
     private Style _style;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -71,8 +73,19 @@ public class HeaderImpl implements Header {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Header addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExample(final String key) {
+        _examples.remove(key);
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -173,6 +186,9 @@ public class HeaderImpl implements Header {
 
     @Override
     public Header addExample(final String key, final Example _examples) {
+        if (_examples == null) {
+            return this;
+        }
         (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
         return this;
     }

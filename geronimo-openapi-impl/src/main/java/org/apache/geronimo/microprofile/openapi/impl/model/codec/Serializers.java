@@ -23,7 +23,11 @@ import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.adapter.JsonbAdapter;
+import javax.json.bind.serializer.JsonbSerializer;
+import javax.json.bind.serializer.SerializationContext;
+import javax.json.stream.JsonGenerator;
 
+import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.headers.Header;
 import org.eclipse.microprofile.openapi.models.media.Encoding;
 import org.eclipse.microprofile.openapi.models.media.Schema;
@@ -133,6 +137,17 @@ public final class Serializers {
 
         public SchemaTypeSerializer() {
             super(Schema.SchemaType.class);
+        }
+    }
+
+    @Vetoed
+    public static class ExtensionSerializer<T extends Extensible<T>> implements JsonbSerializer<T> {
+        @Override
+        public void serialize(final T t, final JsonGenerator jsonGenerator, final SerializationContext serializationContext) {
+            serializationContext.serialize(t, jsonGenerator);
+            if (t.getExtensions() != null) {
+                t.getExtensions().forEach((k, v) -> serializationContext.serialize(k, v, jsonGenerator));
+            }
         }
     }
 }

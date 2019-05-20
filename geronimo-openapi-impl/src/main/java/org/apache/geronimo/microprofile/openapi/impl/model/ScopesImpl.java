@@ -20,16 +20,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.security.Scopes;
 
 @Vetoed
-public class ScopesImpl extends LinkedHashMap<String, String> implements Scopes {
+public class ScopesImpl extends APIMap<String, String> implements Scopes {
 
     private Extensible _extensible = new ExtensibleImpl();
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -40,13 +42,35 @@ public class ScopesImpl extends LinkedHashMap<String, String> implements Scopes 
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Scopes addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
+    }
+
+    @Override
+    public void removeScope(final String scope) {
+        remove(scope);
+    }
+
+    @Override
+    public Map<String, String> getScopes() {
+        return new LinkedHashMap<>(this);
+    }
+
+    @Override
+    public void setScopes(final Map<String, String> items) {
+        clear();
+        putAll(items);
     }
 
     @Override
     public Scopes addScope(final String name, final String item) {
-        this.put(name, item);
+        super.put(name, item);
         return this;
     }
 

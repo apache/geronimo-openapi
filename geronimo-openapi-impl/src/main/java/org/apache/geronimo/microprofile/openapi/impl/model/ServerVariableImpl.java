@@ -22,6 +22,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.servers.ServerVariable;
@@ -38,6 +39,7 @@ public class ServerVariableImpl implements ServerVariable {
     private List<String> _enumeration;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -48,8 +50,19 @@ public class ServerVariableImpl implements ServerVariable {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public ServerVariable addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
+    }
+
+    @Override
+    public void removeEnumeration(final String enumeration) {
+        _enumeration.remove(enumeration);
     }
 
     @Override

@@ -121,7 +121,7 @@ public class OpenAPIMojo extends AbstractMojo {
             }) {
                 final AnnotationProcessor processor = new AnnotationProcessor(
                         (value, def) -> ofNullable(configuration).orElseGet(Collections::emptyMap).getOrDefault(value, def),
-                        loadNamingStrategy());
+                        loadNamingStrategy(), null);
                 if (application != null) {
                     processor.processApplication(api, new ClassElement(load(application)));
                     getLog().info("Processed application " + application);

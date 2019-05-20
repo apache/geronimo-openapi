@@ -21,27 +21,43 @@ import static java.util.Collections.singletonList;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 
 import org.eclipse.microprofile.openapi.models.security.SecurityRequirement;
 
 @Vetoed
-public class SecurityRequirementImpl extends LinkedHashMap<String, List<String>> implements SecurityRequirement {
-
+public class SecurityRequirementImpl extends APIMap<String, List<String>> implements SecurityRequirement {
     @Override
     public SecurityRequirement addScheme(final String securitySchemeName, final String scope) {
-        return addScheme(securitySchemeName, singletonList(scope));
+        return addScheme(securitySchemeName, scope == null ? emptyList() : singletonList(scope));
     }
 
     @Override
     public SecurityRequirement addScheme(final String securitySchemeName, final List<String> scopes) {
-        put(securitySchemeName, scopes);
+        super.put(securitySchemeName, scopes == null ? emptyList() : scopes);
         return this;
     }
 
     @Override
     public SecurityRequirement addScheme(final String securitySchemeName) {
         return addScheme(securitySchemeName, emptyList());
+    }
+
+    @Override
+    public void removeScheme(final String securitySchemeName) {
+        remove(securitySchemeName);
+    }
+
+    @Override
+    public Map<String, List<String>> getSchemes() {
+        return new LinkedHashMap<>(this);
+    }
+
+    @Override
+    public void setSchemes(final Map<String, List<String>> items) {
+        clear();
+        putAll(items);
     }
 }

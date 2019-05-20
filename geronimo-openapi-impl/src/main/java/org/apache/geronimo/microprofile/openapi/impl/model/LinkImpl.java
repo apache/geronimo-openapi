@@ -21,6 +21,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.links.Link;
@@ -46,6 +47,7 @@ public class LinkImpl implements Link {
     private Server _server;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -56,8 +58,19 @@ public class LinkImpl implements Link {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Link addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
+    }
+
+    @Override
+    public void removeParameter(final String name) {
+        _parameters.remove(name);
     }
 
     @Override
@@ -126,7 +139,9 @@ public class LinkImpl implements Link {
 
     @Override
     public Link addParameter(final String key, final Object _parameters) {
-        (this._parameters = this._parameters == null ? new LinkedHashMap<>() : this._parameters).put(key, _parameters);
+        if (_parameters != null) {
+            (this._parameters = this._parameters == null ? new LinkedHashMap<>() : this._parameters).put(key, _parameters);
+        }
         return this;
     }
 

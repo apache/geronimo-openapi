@@ -19,6 +19,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.info.Contact;
@@ -35,6 +36,7 @@ public class ContactImpl implements Contact {
     private String _url;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -45,8 +47,14 @@ public class ContactImpl implements Contact {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Contact addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override

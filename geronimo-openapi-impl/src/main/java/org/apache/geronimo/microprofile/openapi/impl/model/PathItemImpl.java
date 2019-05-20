@@ -27,7 +27,10 @@ import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
+import javax.json.bind.annotation.JsonbTypeSerializer;
 
+import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.Operation;
 import org.eclipse.microprofile.openapi.models.PathItem;
@@ -66,6 +69,7 @@ public class PathItemImpl implements PathItem {
     private String _summary;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -76,12 +80,19 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public PathItem addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
     @JsonbProperty("delete")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getDELETE() {
         return _dELETE;
     }
@@ -116,6 +127,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("get")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getGET() {
         return _gET;
     }
@@ -134,6 +146,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("head")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getHEAD() {
         return _hEAD;
     }
@@ -152,6 +165,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("options")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getOPTIONS() {
         return _oPTIONS;
     }
@@ -170,6 +184,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("patch")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getPATCH() {
         return _pATCH;
     }
@@ -188,6 +203,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("post")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getPOST() {
         return _pOST;
     }
@@ -206,6 +222,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("put")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getPUT() {
         return _pUT;
     }
@@ -240,8 +257,15 @@ public class PathItemImpl implements PathItem {
 
     @Override
     public PathItem addParameter(final Parameter _parameters) {
-        (this._parameters = this._parameters == null ? new ArrayList<>() : this._parameters).add(_parameters);
+        if (_parameters != null) {
+            (this._parameters = this._parameters == null ? new ArrayList<>() : this._parameters).add(_parameters);
+        }
         return this;
+    }
+
+    @Override
+    public void removeParameter(final Parameter parameter) {
+        _parameters.remove(parameter);
     }
 
     @Override
@@ -280,8 +304,15 @@ public class PathItemImpl implements PathItem {
 
     @Override
     public PathItem addServer(final Server _servers) {
-        (this._servers = this._servers == null ? new ArrayList<>() : this._servers).add(_servers);
+        if (_servers != null) {
+            (this._servers = this._servers == null ? new ArrayList<>() : this._servers).add(_servers);
+        }
         return this;
+    }
+
+    @Override
+    public void removeServer(final Server server) {
+        _servers.remove(server);
     }
 
     @Override
@@ -302,6 +333,7 @@ public class PathItemImpl implements PathItem {
 
     @Override
     @JsonbProperty("trace")
+    @JsonbTypeSerializer(Serializers.ExtensionSerializer.class)
     public Operation getTRACE() {
         return _tRACE;
     }
@@ -324,7 +356,8 @@ public class PathItemImpl implements PathItem {
     }
 
     @Override
-    public Map<HttpMethod, Operation> readOperationsMap() {
+    @JsonbTransient
+    public Map<HttpMethod, Operation> getOperations() {
         final Map<HttpMethod, Operation> map = new HashMap<>();
         map.put(HttpMethod.DELETE, _dELETE);
         map.put(HttpMethod.GET, _gET);
@@ -335,5 +368,10 @@ public class PathItemImpl implements PathItem {
         map.put(HttpMethod.PUT, _pUT);
         map.put(HttpMethod.TRACE, _tRACE);
         return map;
+    }
+
+    @Override
+    public Map<HttpMethod, Operation> readOperationsMap() {
+        return getOperations();
     }
 }

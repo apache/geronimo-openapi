@@ -24,16 +24,11 @@ import java.math.BigDecimal;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.JsonNumber;
+import javax.json.JsonString;
+import javax.json.JsonValue;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbTransient;
-
-import org.apache.geronimo.microprofile.openapi.impl.loader.ApiBindings;
-import org.eclipse.microprofile.openapi.models.OpenAPI;
-import org.eclipse.microprofile.openapi.models.headers.Header;
-import org.eclipse.microprofile.openapi.models.media.Encoding;
-import org.eclipse.microprofile.openapi.models.media.Schema;
-import org.eclipse.microprofile.openapi.models.parameters.Parameter;
-import org.eclipse.microprofile.openapi.models.security.SecurityScheme;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -50,7 +45,16 @@ import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.module.SimpleAbstractTypeResolver;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.NumberSerializer;
+import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
+import com.fasterxml.jackson.databind.ser.std.StringSerializer;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.apache.geronimo.microprofile.openapi.impl.loader.ApiBindings;
+import org.eclipse.microprofile.openapi.models.OpenAPI;
+import org.eclipse.microprofile.openapi.models.headers.Header;
+import org.eclipse.microprofile.openapi.models.media.Encoding;
+import org.eclipse.microprofile.openapi.models.media.Schema;
+import org.eclipse.microprofile.openapi.models.parameters.Parameter;
+import org.eclipse.microprofile.openapi.models.security.SecurityScheme;
 
 @Vetoed
 public final class Yaml {
@@ -121,6 +125,41 @@ public final class Yaml {
                 }
             }
         });
+        module.addSerializer(JsonString.class, new StdScalarSerializer<JsonString>(JsonString.class) {
+            @Override
+            public void serialize(final JsonString value, final JsonGenerator gen, final SerializerProvider provider) throws IOException {
+                gen.writeString(value.getString());
+            }
+        });
+        module.addSerializer(JsonNumber.class, new StdScalarSerializer<JsonNumber>(JsonNumber.class) {
+            @Override
+            public void serialize(final JsonNumber value, final JsonGenerator gen, final SerializerProvider provider) throws IOException {
+                final double v = value.doubleValue();
+                if (v == value.intValue()) {
+                    gen.writeNumber(value.intValue());
+                } else if (v == value.longValue()) {
+                    gen.writeNumber(value.longValue());
+                } else {
+                    gen.writeNumber(v);
+                }
+            }
+        });
+        module.addSerializer(JsonValue.class, new StdScalarSerializer<JsonValue>(JsonValue.class) {
+            @Override
+            public void serialize(final JsonValue value, final JsonGenerator gen, final SerializerProvider provider) throws IOException {
+                switch (value.getValueType()) {
+                    case TRUE:
+                    case FALSE:
+                        gen.writeBoolean(value.equals(JsonValue.TRUE));
+                        break;
+                    case ARRAY:
+                    case OBJECT:
+                        gen.writeTree(new ObjectMapper().readTree(value.toString())); // not elegant but is it that common?
+                        break;
+                    default:
+                }
+            }
+        });
         Stream.of(SecurityScheme.Type.class, SecurityScheme.In.class,
                 Schema.SchemaType.class, Header.Style.class, Encoding.Style.class,
                 Parameter.Style.class, Parameter.In.class)
@@ -129,6 +168,11 @@ public final class Yaml {
         final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.registerModule(module);
         mapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
+            @Override
+            public Boolean hasAnyGetter(final Annotated a) {
+                return "getExtensions".equals(a.getName());
+            }
+
             @Override
             protected boolean _isIgnorable(final Annotated a) {
                 return super._isIgnorable(a) || a.getAnnotation(JsonbTransient.class) != null;

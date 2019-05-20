@@ -19,6 +19,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
@@ -45,6 +46,7 @@ public class EncodingImpl implements Encoding {
     private Style _style;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -55,8 +57,14 @@ public class EncodingImpl implements Encoding {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Encoding addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -115,6 +123,19 @@ public class EncodingImpl implements Encoding {
     @Override
     public void setHeaders(final Map<String, Header> _headers) {
         this._headers = _headers;
+    }
+
+    @Override
+    public Encoding addHeader(final String key, final Header header) {
+        if (header != null) {
+            _headers.put(key, header);
+        }
+        return this;
+    }
+
+    @Override
+    public void removeHeader(final String key) {
+        _headers.remove(key);
     }
 
     @Override

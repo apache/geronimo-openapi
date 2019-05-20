@@ -21,6 +21,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeAdapter;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
@@ -64,6 +65,7 @@ public class ParameterImpl implements Parameter {
     private Style _style;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -74,8 +76,14 @@ public class ParameterImpl implements Parameter {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Parameter addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -192,8 +200,15 @@ public class ParameterImpl implements Parameter {
 
     @Override
     public Parameter addExample(final String key, final Example _examples) {
-        (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
+        if (_examples != null) {
+            (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
+        }
         return this;
+    }
+
+    @Override
+    public void removeExample(final String key) {
+        _examples.remove(key);
     }
 
     @Override

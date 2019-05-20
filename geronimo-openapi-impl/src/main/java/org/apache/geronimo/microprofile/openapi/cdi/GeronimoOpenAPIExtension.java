@@ -79,7 +79,7 @@ public class GeronimoOpenAPIExtension implements Extension {
 
     void init(@Observes final BeforeBeanDiscovery beforeBeanDiscovery) {
         config = GeronimoOpenAPIConfig.create();
-        processor = new AnnotationProcessor(config, loadNamingStrategy(config));
+        processor = new AnnotationProcessor(config, loadNamingStrategy(config), null);
         skipScan = Boolean.parseBoolean(config.read(OASConfig.SCAN_DISABLE, "false"));
         classes = getConfigCollection(OASConfig.SCAN_CLASSES);
         packages = getConfigCollection(OASConfig.SCAN_PACKAGES);

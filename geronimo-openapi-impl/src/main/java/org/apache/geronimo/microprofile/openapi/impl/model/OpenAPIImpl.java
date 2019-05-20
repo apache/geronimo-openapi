@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.Extensible;
@@ -55,6 +56,7 @@ public class OpenAPIImpl implements OpenAPI {
     private List<Tag> _tags;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -65,8 +67,29 @@ public class OpenAPIImpl implements OpenAPI {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public OpenAPI addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
+    }
+
+    @Override
+    public void removeServer(final Server server) {
+        _servers.remove(server);
+    }
+
+    @Override
+    public void removeSecurityRequirement(final SecurityRequirement securityRequirement) {
+        _security.remove(securityRequirement);
+    }
+
+    @Override
+    public void removeTag(final Tag tag) {
+        _tags.remove(tag);
     }
 
     @Override

@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
@@ -47,6 +48,7 @@ public class APIResponseImpl implements APIResponse {
     private String _ref;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -57,8 +59,24 @@ public class APIResponseImpl implements APIResponse {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public APIResponse addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeHeader(final String name) {
+        _headers.remove(name);
+    }
+
+    @Override
+    public void removeLink(final String name) {
+        _links.remove(name);
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -111,7 +129,9 @@ public class APIResponseImpl implements APIResponse {
 
     @Override
     public APIResponse addHeader(final String key, final Header _headers) {
-        (this._headers = this._headers == null ? new LinkedHashMap<>() : this._headers).put(key, _headers);
+        if (_headers != null) {
+            (this._headers = this._headers == null ? new LinkedHashMap<>() : this._headers).put(key, _headers);
+        }
         return this;
     }
 
@@ -133,7 +153,9 @@ public class APIResponseImpl implements APIResponse {
 
     @Override
     public APIResponse addLink(final String key, final Link _links) {
-        (this._links = this._links == null ? new LinkedHashMap<>() : this._links).put(key, _links);
+        if (_links != null) {
+            (this._links = this._links == null ? new LinkedHashMap<>() : this._links).put(key, _links);
+        }
         return this;
     }
 

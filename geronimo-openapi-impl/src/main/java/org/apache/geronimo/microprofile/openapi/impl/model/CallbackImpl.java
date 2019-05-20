@@ -20,19 +20,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.PathItem;
 import org.eclipse.microprofile.openapi.models.callbacks.Callback;
 
 @Vetoed
-public class CallbackImpl extends LinkedHashMap<String, PathItem> implements Callback {
+public class CallbackImpl extends APIMap<String, PathItem> implements Callback {
 
     private Extensible _extensible = new ExtensibleImpl();
 
     private String _ref;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -43,14 +45,38 @@ public class CallbackImpl extends LinkedHashMap<String, PathItem> implements Cal
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Callback addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
     public Callback addPathItem(final String name, final PathItem item) {
-        this.put(name, item);
+        if (item != null) {
+            super.put(name, item);
+        }
         return this;
+    }
+
+    @Override
+    public void removePathItem(final String name) {
+        remove(name);
+    }
+
+    @Override
+    public Map<String, PathItem> getPathItems() {
+        return new LinkedHashMap<>(this);
+    }
+
+    @Override
+    public void setPathItems(final Map<String, PathItem> items) {
+        clear();
+        putAll(items);
     }
 
     @Override
