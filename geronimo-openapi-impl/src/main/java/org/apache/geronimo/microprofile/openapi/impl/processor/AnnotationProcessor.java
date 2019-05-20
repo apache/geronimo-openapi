@@ -17,6 +17,7 @@
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.Locale.ROOT;
 import static java.util.Optional.of;
@@ -25,12 +26,14 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.io.StringReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,11 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.Json;
+import javax.json.JsonNumber;
+import javax.json.JsonReader;
+import javax.json.JsonReaderFactory;
+import javax.json.JsonValue;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.DELETE;
@@ -81,6 +89,7 @@ import org.apache.geronimo.microprofile.openapi.impl.model.ParameterImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.PathItemImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.RequestBodyImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.SchemaImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ScopesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.SecurityRequirementImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.SecuritySchemeImpl;
@@ -109,6 +118,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameters;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.security.OAuthFlow;
@@ -134,11 +144,14 @@ public class AnnotationProcessor {
     private final GeronimoOpenAPIConfig config;
     private final SchemaProcessor schemaProcessor;
     private final NamingStrategy operationNamingStrategy;
+    private final JsonReaderFactory jsonReaderFactory;
 
-    public AnnotationProcessor(final GeronimoOpenAPIConfig config, final NamingStrategy strategy) {
+    public AnnotationProcessor(final GeronimoOpenAPIConfig config, final NamingStrategy strategy,
+                               final JsonReaderFactory factory) {
         this.config = config;
         this.schemaProcessor = new SchemaProcessor();
         this.operationNamingStrategy = strategy;
+        this.jsonReaderFactory = factory != null ? factory : Json.createReaderFactory(emptyMap());
     }
 
     public void processClass(final String basePath, final OpenAPI api, final AnnotatedElement annotatedType,
@@ -275,6 +288,11 @@ public class AnnotationProcessor {
 
         ofNullable(m.getAnnotation(SecurityScheme.class))
                 .ifPresent(s -> api.getComponents().addSecurityScheme(s.ref(), mapSecurityScheme(s)));
+
+        ofNullable(m.getAnnotationsByType(Extension.class))
+                .map(this::mapExtensions)
+                .ifPresent(exts -> exts.forEach(operation::addExtension));
+
         operation.security(of(Stream.concat(
                 Stream.of(m.getAnnotationsByType(SecurityRequirement.class)),
                 Stream.of(m.getDeclaringClass().getAnnotationsByType(SecurityRequirement.class)))
@@ -323,7 +341,7 @@ public class AnnotationProcessor {
 
                                  produces
                                      .orElseGet(() -> singletonList("*/*"))
-                                     .forEach(mt -> content.put(mt, new MediaTypeImpl()));
+                                     .forEach(mt -> content.addMediaType(mt, new MediaTypeImpl()));
                                  
                                  v.content(content);
                              }
@@ -345,7 +363,7 @@ public class AnnotationProcessor {
                              final ContentImpl content = new ContentImpl();
                              final MediaTypeImpl mediaType = new MediaTypeImpl();
                              mediaType.setSchema(schema);
-                             content.put("", mediaType);
+                             content.addMediaType("", mediaType);
                              v.content(content);
                          } else {
                              v.getContent().values().stream()
@@ -355,7 +373,7 @@ public class AnnotationProcessor {
                     });
             responses.values().stream().filter(r -> r.getContent() != null)
                      .forEach(resp -> ofNullable(resp.getContent().remove(""))
-                             .ifPresent(updated -> produces.ifPresent(mt -> mt.forEach(type -> resp.getContent().put(type, updated)))));
+                             .ifPresent(updated -> produces.ifPresent(mt -> mt.forEach(type -> resp.getContent().addMediaType(type, updated)))));
             operation.responses(responses);
         });
         operation.parameters(Stream.of(m.getParameters())
@@ -365,6 +383,10 @@ public class AnnotationProcessor {
                                 () -> getOrCreateComponents(api), it.getType()))))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
+                .filter(it -> it.isAnnotationPresent(Parameters.class))
+                .map(it -> it.getAnnotation(Parameters.class).value())
+                .forEach(params -> operation.parameters(mapParameters(api, params)));
+        Stream.of(m.getParameters())
                 .filter(p -> p.isAnnotationPresent(RequestBody.class) ||
                         (!p.isAnnotationPresent(Suspended.class) && !p.isAnnotationPresent(Context.class) &&
                                 !p.isAnnotationPresent(Parameter.class) && !hasJaxRsParams(p)))
@@ -373,6 +395,27 @@ public class AnnotationProcessor {
                         produces.filter(it -> !it.isEmpty()).map(it -> it.iterator().next()).orElse(null), p,
                         () -> getOrCreateComponents(api), ofNullable(p.getAnnotation(RequestBody.class))
                     .orElseGet(() -> m.getAnnotation(RequestBody.class)))));
+        // ensure parameters have all schemas
+        operation.getParameters().stream()
+                .filter(it -> it.getSchema() == null)
+                .forEach(it -> Stream.of(m.getParameters())
+                        .filter(mp -> findAnnotatedParameterByName(it, mp))
+                        .findFirst()
+                        .ifPresent(mp -> it.setSchema(schemaProcessor.mapSchemaFromClass(() -> getOrCreateComponents(api), mp.getType()))));
+        // ensure parameter contents have all schemas
+        operation.getParameters().stream()
+                .filter(it -> it.getContent() != null && it.getContent().values().stream().anyMatch(c -> c.getSchema() == null || c.getSchema().getType() == null))
+                .forEach(it -> Stream.of(m.getParameters())
+                        .filter(mp -> findAnnotatedParameterByName(it, mp))
+                        .findFirst()
+                        .ifPresent(mp -> it.getContent().values().stream().filter(c -> c.getSchema() == null || c.getSchema().getType() == null).forEach(mt -> {
+                            final org.eclipse.microprofile.openapi.models.media.Schema schema = schemaProcessor.mapSchemaFromClass(() -> getOrCreateComponents(api), mp.getType());
+                            if (mt.getSchema() == null) {
+                                mt.setSchema(schema);
+                            } else {
+                                mt.getSchema().type(schema.getType());
+                            }
+                        })));
         if (operation.getResponses() == null) {
             final APIResponsesImpl responses = new APIResponsesImpl();
             operation.responses(responses);
@@ -381,16 +424,31 @@ public class AnnotationProcessor {
             if (normalResponse) {
                 final MediaType impl = new MediaTypeImpl();
                 impl.setSchema(schemaProcessor.mapSchemaFromClass(() -> getOrCreateComponents(api), m.getReturnType()));
-                produces.orElseGet(() -> singletonList("*/*")).forEach(key -> content.put(key, impl));
+                produces.orElseGet(() -> singletonList("*/*")).forEach(key -> content.addMediaType(key, impl));
             }
             final org.eclipse.microprofile.openapi.models.responses.APIResponse defaultResponse =
                     new APIResponseImpl().description("default response").content(content);
-            responses.put(
+            responses.addApiResponse(
                     m.getReturnType() == void.class || m.getReturnType() == Void.class && normalResponse ?
                             "204" : "200", defaultResponse);
             responses.defaultValue(defaultResponse);
         }
         return operation;
+    }
+
+    private boolean findAnnotatedParameterByName(final org.eclipse.microprofile.openapi.models.parameters.Parameter it,
+                                                 final AnnotatedTypeElement mp) {
+        final String expected = ofNullable(it.getName()).orElse("");
+        if (mp.isAnnotationPresent(PathParam.class)) {
+            return expected.equals(mp.getAnnotation(PathParam.class).value());
+        } else if (mp.isAnnotationPresent(HeaderParam.class)) {
+            return expected.equals(mp.getAnnotation(HeaderParam.class).value());
+        } else if (mp.isAnnotationPresent(CookieParam.class)) {
+            return expected.equals(mp.getAnnotation(CookieParam.class).value());
+        } else if (mp.isAnnotationPresent(QueryParam.class)) {
+            return expected.equals(mp.getAnnotation(QueryParam.class).value());
+        }
+        return false;
     }
 
     private Server[] findServers(final AnnotatedElement annotatedElement) {
@@ -604,7 +662,7 @@ public class AnnotationProcessor {
 
     private Scopes createScopes(final OAuthFlow authorizationCode) {
         final ScopesImpl scopes = new ScopesImpl();
-        Stream.of(authorizationCode.scopes()).forEach(s -> scopes.put(s.name(), s.description()));
+        Stream.of(authorizationCode.scopes()).forEach(s -> scopes.addScope(s.name(), s.description()));
         return scopes;
     }
 
@@ -679,7 +737,7 @@ public class AnnotationProcessor {
             });
         }
 
-        impl.put(callback.callbackUrlExpression(), pathItem);
+        impl.addPathItem(callback.callbackUrlExpression(), pathItem);
         return impl;
     }
 
@@ -701,7 +759,7 @@ public class AnnotationProcessor {
                     toMap(it -> of(it.mediaType()).filter(v -> !v.isEmpty()).orElse(""), it -> mapContent(components, it))));
             ofNullable(content.remove(""))
                     .ifPresent(c -> (defaultMediaTypes == null ? singletonList("*/*") : defaultMediaTypes)
-                            .forEach(it -> content.put(it, c)));
+                            .forEach(it -> content.addMediaType(it, c)));
             impl.content(content);
         }
         if (response.links().length > 0) {
@@ -746,7 +804,7 @@ public class AnnotationProcessor {
             impl.required(true);
         }
         if (impl.getContent().isEmpty() && param != null && defaultContentType != null) {
-            impl.getContent().put(defaultContentType, new MediaTypeImpl()
+            impl.getContent().addMediaType(defaultContentType, new MediaTypeImpl()
                     .schema(schemaProcessor.mapSchemaFromClass(components, param.getType())));
         }
         return impl;
@@ -761,6 +819,9 @@ public class AnnotationProcessor {
         if (content.examples().length > 0) {
             impl.examples(Stream.of(content.examples()).collect(toMap(
                     it -> of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref()), this::mapExample)));
+        }
+        if (!content.example().isEmpty()) {
+            impl.example(content.example());
         }
         return impl;
     }
@@ -924,7 +985,38 @@ public class AnnotationProcessor {
     }
 
     private Map<String, Object> mapExtensions(final Extension[] extensions) {
-        return Stream.of(extensions).collect(toMap(Extension::name, Extension::value));
+        return Stream.of(extensions)
+                .collect(toMap(Extension::name, e -> {
+                    if (e.parseValue()) {
+                        return parse(e.value());
+                    }
+                    return e.value();
+                }));
+    }
+
+    private Object parse(final String value) {
+        try (final JsonReader reader = jsonReaderFactory.createReader(new StringReader(value))) {
+            final JsonValue jsonValue = reader.readValue();
+            switch (jsonValue.getValueType()) {
+                case NULL:
+                    return null;
+                case TRUE:
+                case FALSE:
+                    return JsonValue.TRUE.equals(jsonValue);
+                case NUMBER:
+                    final JsonNumber number = JsonNumber.class.cast(jsonValue);
+                    final double doubleValue = number.doubleValue();
+                    if (doubleValue == number.intValue()) {
+                        return number.intValue();
+                    }
+                    if (doubleValue == number.longValue()) {
+                        return number.longValue();
+                    }
+                    return doubleValue;
+                default:
+                    return jsonValue;
+            }
+        }
     }
 
     private void processDefinition(final OpenAPI api, final OpenAPIDefinition annotation) {

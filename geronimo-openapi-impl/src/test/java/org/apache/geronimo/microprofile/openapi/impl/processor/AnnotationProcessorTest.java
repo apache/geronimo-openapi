@@ -51,7 +51,7 @@ public class AnnotationProcessorTest {
 
     @Test
     public void ensureParametersAreMapped() {
-        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
         OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                 Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -65,7 +65,7 @@ public class AnnotationProcessorTest {
     
     @Test
     public void ensureParameterAnnotationsAreMerged() {
-        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
         OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                 Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -78,7 +78,7 @@ public class AnnotationProcessorTest {
     
     @Test
     public void ensureResponsesMediaTypeIsSetForDefaultResponses() {
-        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
         OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                 Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -94,7 +94,7 @@ public class AnnotationProcessorTest {
     
     @Test
     public void ensureResponsesMediaTypeIsSetForAllResponses() {
-        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
         OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                 Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -110,7 +110,7 @@ public class AnnotationProcessorTest {
     
     @Test
     public void ensureResponsesDefaultMediaTypeIsSet() {
-        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default());
+        AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
         OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                 Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -133,7 +133,7 @@ public class AnnotationProcessorTest {
 
         final GeronimoOpenAPIConfig config = (value, def) -> null;
         expectations.forEach((strategy, operationName) -> {
-            final AnnotationProcessor annotationProcessor = new AnnotationProcessor(config, strategy);
+            final AnnotationProcessor annotationProcessor = new AnnotationProcessor(config, strategy, null);
             final OpenAPI openAPI = new OpenAPIImpl();
             annotationProcessor.processClass("", openAPI, new ClassElement(TestResource.class),
                     Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
@@ -143,7 +143,7 @@ public class AnnotationProcessorTest {
 
     @Test
     public void rootPath() {
-        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default());
+        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default(), null);
         final OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(RootPath.class),
                 Stream.of(RootPath.class.getMethods()).map(MethodElement::new));
@@ -152,7 +152,7 @@ public class AnnotationProcessorTest {
 
     @Test
     public void patch() {
-        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default());
+        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default(), null);
         final OpenAPI openAPI = new OpenAPIImpl();
         annotationProcessor.processClass("", openAPI, new ClassElement(Patched.class),
                 Stream.of(Patched.class.getMethods()).map(MethodElement::new));

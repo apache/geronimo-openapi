@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.ExternalDocumentation;
@@ -37,6 +38,7 @@ public class TagImpl implements Tag {
     private String _name;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -47,8 +49,14 @@ public class TagImpl implements Tag {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Tag addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override

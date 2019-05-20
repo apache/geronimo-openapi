@@ -20,6 +20,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeAdapter;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
@@ -51,6 +52,7 @@ public class SecuritySchemeImpl implements SecurityScheme {
     private Type _type;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -61,8 +63,14 @@ public class SecuritySchemeImpl implements SecurityScheme {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public SecurityScheme addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override

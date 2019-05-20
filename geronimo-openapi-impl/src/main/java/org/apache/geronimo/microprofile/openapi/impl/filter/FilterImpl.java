@@ -44,29 +44,27 @@ public class FilterImpl {
     public OpenAPI filter(final OpenAPI api) {
         ofNullable(api.getComponents()).ifPresent(this::filterComponents);
         ofNullable(api.getPaths())
-                .ifPresent(paths -> {
-                    paths.forEach((k, v) -> {
-                        ofNullable(v.readOperationsMap())
-                                .ifPresent(operations -> {
-                                    operations.entrySet().stream()
-                                            .filter(it -> it.getValue() != null)
-                                            .filter(it -> delegate.filterOperation(it.getValue()) == null)
-                                            .map(Map.Entry::getKey)
-                                            .collect(toList())
-                                            .forEach(operations::remove);
-                                    operations.values().stream().filter(Objects::nonNull).forEach(this::filterOperation);
-                                });
+                .ifPresent(paths -> paths.forEach((k, v) -> {
+                    ofNullable(v.readOperationsMap())
+                            .ifPresent(operations -> {
+                                operations.entrySet().stream()
+                                        .filter(it -> it.getValue() != null)
+                                        .filter(it -> delegate.filterOperation(it.getValue()) == null)
+                                        .map(Map.Entry::getKey)
+                                        .collect(toList())
+                                        .forEach(operations::remove);
+                                operations.values().stream().filter(Objects::nonNull).forEach(this::filterOperation);
+                            });
 
-                        paths.entrySet().stream()
-                                .filter(it -> delegate.filterPathItem(it.getValue()) == null)
-                                .map(Map.Entry::getKey)
-                                .collect(toList())
-                                .forEach(paths::remove);
+                    paths.entrySet().stream()
+                            .filter(it -> delegate.filterPathItem(it.getValue()) == null)
+                            .map(Map.Entry::getKey)
+                            .collect(toList())
+                            .forEach(paths::remove);
 
-                        ofNullable(v.getParameters()).ifPresent(this::filterParameters);
-                        ofNullable(v.getServers()).ifPresent(this::filterServers);
-                    });
-                });
+                    ofNullable(v.getParameters()).ifPresent(this::filterParameters);
+                    ofNullable(v.getServers()).ifPresent(this::filterServers);
+                }));
         ofNullable(api.getServers()).ifPresent(this::filterServers);
         ofNullable(api.getTags()).ifPresent(this::filterTags);
         delegate.filterOpenAPI(api);
@@ -84,11 +82,6 @@ public class FilterImpl {
         ofNullable(op.getCallbacks()).ifPresent(this::filterCallbacks);
         ofNullable(op.getResponses())
                 .ifPresent(responses -> {
-                    responses.entrySet().stream()
-                            .filter(it -> delegate.filterAPIResponse(it.getValue()) == null)
-                            .map(Map.Entry::getKey)
-                            .collect(toList())
-                            .forEach(responses::remove);
                     responses.forEach((rk, response) -> {
                         ofNullable(response.getLinks()).ifPresent(this::filterLinks);
                         ofNullable(response.getContent())
@@ -99,6 +92,11 @@ public class FilterImpl {
                                         }
                                     });
                                 }));
+                    responses.entrySet().stream()
+                            .filter(it -> delegate.filterAPIResponse(it.getValue()) == null)
+                            .map(Map.Entry::getKey)
+                            .collect(toList())
+                            .forEach(responses::remove);
                     });
                 });
     }

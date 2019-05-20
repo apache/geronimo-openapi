@@ -17,6 +17,7 @@
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 
@@ -24,11 +25,29 @@ import org.eclipse.microprofile.openapi.models.media.Content;
 import org.eclipse.microprofile.openapi.models.media.MediaType;
 
 @Vetoed
-public class ContentImpl extends LinkedHashMap<String, MediaType> implements Content {
+public class ContentImpl extends APIMap<String, MediaType> implements Content {
 
     @Override
     public Content addMediaType(final String name, final MediaType item) {
-        this.put(name, item);
+        if (item != null) {
+            super.put(name, item);
+        }
         return this;
+    }
+
+    @Override
+    public void removeMediaType(final String name) {
+        remove(name);
+    }
+
+    @Override
+    public Map<String, MediaType> getMediaTypes() {
+        return new LinkedHashMap<>(this);
+    }
+
+    @Override
+    public void setMediaTypes(final Map<String, MediaType> mediaTypes) {
+        clear();
+        putAll(mediaTypes);
     }
 }

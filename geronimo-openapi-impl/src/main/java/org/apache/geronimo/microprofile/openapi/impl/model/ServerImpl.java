@@ -19,9 +19,12 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.servers.Server;
+import org.eclipse.microprofile.openapi.models.servers.ServerVariable;
 import org.eclipse.microprofile.openapi.models.servers.ServerVariables;
 
 @Vetoed
@@ -36,6 +39,7 @@ public class ServerImpl implements Server {
     private ServerVariables _variables;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -46,8 +50,14 @@ public class ServerImpl implements Server {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Server addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String s) {
+        _extensible.removeExtension(s);
     }
 
     @Override
@@ -83,13 +93,26 @@ public class ServerImpl implements Server {
     }
 
     @Override
+    @JsonbProperty("variables")
     public ServerVariables getVariables() {
         return _variables;
     }
 
     @Override
+    @JsonbProperty("variables")
     public void setVariables(final ServerVariables _variables) {
         this._variables = _variables;
+    }
+
+    @Override
+    @JsonbTransient
+    public void setVariables(final Map<String, ServerVariable> map) {
+        if (map != null) {
+            this._variables = new ServerVariablesImpl();
+            map.forEach((k, v) -> this._variables.addServerVariable(k, v));
+        } else {
+            this._variables = null;
+        }
     }
 
     @Override

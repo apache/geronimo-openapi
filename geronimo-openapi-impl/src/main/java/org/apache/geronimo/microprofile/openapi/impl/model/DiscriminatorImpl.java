@@ -48,8 +48,15 @@ public class DiscriminatorImpl implements Discriminator {
 
     @Override
     public Discriminator addMapping(final String key, final String _mapping) {
-        (this._mapping = this._mapping == null ? new LinkedHashMap<>() : this._mapping).put(key, _mapping);
+        if (_mapping != null) {
+            (this._mapping = this._mapping == null ? new LinkedHashMap<>() : this._mapping).put(key, _mapping);
+        }
         return this;
+    }
+
+    @Override
+    public void removeMapping(final String name) {
+        _mapping.remove(name);
     }
 
     @Override

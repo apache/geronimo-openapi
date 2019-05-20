@@ -20,17 +20,19 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.servers.ServerVariable;
 import org.eclipse.microprofile.openapi.models.servers.ServerVariables;
 
 @Vetoed
-public class ServerVariablesImpl extends LinkedHashMap<String, ServerVariable> implements ServerVariables {
+public class ServerVariablesImpl extends APIMap<String, ServerVariable> implements ServerVariables {
 
     private Extensible _extensible = new ExtensibleImpl();
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -41,13 +43,37 @@ public class ServerVariablesImpl extends LinkedHashMap<String, ServerVariable> i
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public ServerVariables addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String s) {
+        _extensible.removeExtension(s);
     }
 
     @Override
     public ServerVariables addServerVariable(final String name, final ServerVariable item) {
-        this.put(name, item);
+        if (item != null) {
+            this.put(name, item);
+        }
         return this;
+    }
+
+    @Override
+    public void removeServerVariable(final String s) {
+        remove(s);
+    }
+
+    @Override
+    public Map<String, ServerVariable> getServerVariables() {
+        return new LinkedHashMap<>(this);
+    }
+
+    @Override
+    public void setServerVariables(final Map<String, ServerVariable> map) {
+        clear();
+        putAll(map);
     }
 }

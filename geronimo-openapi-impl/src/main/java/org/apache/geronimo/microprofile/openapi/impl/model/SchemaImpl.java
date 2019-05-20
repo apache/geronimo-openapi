@@ -111,6 +111,7 @@ public class SchemaImpl implements Schema {
     private XML _xml;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -121,8 +122,14 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Schema addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -132,12 +139,41 @@ public class SchemaImpl implements Schema {
 
     @Override
     @JsonbTransient
+    public Schema getAdditionalPropertiesSchema() {
+        return Schema.class.isInstance(_additionalProperties) ? Schema.class.cast(_additionalProperties) : null;
+    }
+
+    @Override
+    @JsonbTransient
+    public Boolean getAdditionalPropertiesBoolean() {
+        return Boolean.class.isInstance(_additionalProperties) ? Boolean.class.cast(_additionalProperties) : null;
+    }
+
+    public void setAdditionalProperties(final Object additionalProperties) {
+        _additionalProperties = additionalProperties;
+    }
+
+    @Override
+    @JsonbTransient
     public void setAdditionalProperties(final Boolean additionalProperties) {
         _additionalProperties = additionalProperties;
     }
 
     @Override
+    @JsonbTransient
+    public void setAdditionalPropertiesBoolean(final Boolean additionalProperties) {
+        _additionalProperties = additionalProperties;
+    }
+
+    @Override
+    @JsonbTransient
     public void setAdditionalProperties(final Schema additionalProperties) {
+        this._additionalProperties = additionalProperties;
+    }
+
+    @Override
+    @JsonbTransient
+    public void setAdditionalPropertiesSchema(final Schema additionalProperties) {
         this._additionalProperties = additionalProperties;
     }
 
@@ -171,8 +207,15 @@ public class SchemaImpl implements Schema {
 
     @Override
     public Schema addAllOf(final Schema allOf) {
-        (_allOf = _allOf == null ? new ArrayList<>() : _allOf).add(allOf);
+        if (allOf != null) {
+            (_allOf = _allOf == null ? new ArrayList<>() : _allOf).add(allOf);
+        }
         return this;
+    }
+
+    @Override
+    public void removeAllOf(final Schema allOf) {
+        _allOf.remove(allOf);
     }
 
     @Override
@@ -192,9 +235,16 @@ public class SchemaImpl implements Schema {
     }
 
     @Override
-    public Schema addAnyOf(Schema anyOf) {
-        (_anyOf = _anyOf == null ? new ArrayList<>() : _anyOf).add(anyOf);
+    public Schema addAnyOf(final Schema anyOf) {
+        if (anyOf != null) {
+            (_anyOf = _anyOf == null ? new ArrayList<>() : _anyOf).add(anyOf);
+        }
         return this;
+    }
+
+    @Override
+    public void removeAnyOf(final Schema anyOf) {
+        _anyOf.remove(anyOf);
     }
 
     @Override
@@ -283,8 +333,15 @@ public class SchemaImpl implements Schema {
 
     @Override
     public Schema addEnumeration(final Object enumeration) {
-        (_enumeration = _enumeration == null ? new ArrayList<>() : _enumeration).add(enumeration);
+        if (enumeration != null) {
+            (_enumeration = _enumeration == null ? new ArrayList<>() : _enumeration).add(enumeration);
+        }
         return this;
+    }
+
+    @Override
+    public void removeEnumeration(final Object enumeration) {
+        _enumeration.remove(enumeration);
     }
 
     @Override
@@ -580,8 +637,15 @@ public class SchemaImpl implements Schema {
 
     @Override
     public Schema addOneOf(final Schema oneOf) {
-        (_oneOf = _oneOf == null ? new ArrayList<>() : _oneOf).add(oneOf);
+        if (oneOf != null) {
+            (_oneOf = _oneOf == null ? new ArrayList<>() : _oneOf).add(oneOf);
+        }
         return this;
+    }
+
+    @Override
+    public void removeOneOf(final Schema oneOf) {
+        _oneOf.remove(oneOf);
     }
 
     @Override
@@ -618,8 +682,15 @@ public class SchemaImpl implements Schema {
 
     @Override
     public Schema addProperty(final String key, final Schema _properties) {
-        (this._properties = this._properties == null ? new LinkedHashMap<>() : this._properties).put(key, _properties);
+        if (_properties != null) {
+            (this._properties = this._properties == null ? new LinkedHashMap<>() : this._properties).put(key, _properties);
+        }
         return this;
+    }
+
+    @Override
+    public void removeProperty(final String key) {
+        _properties.remove(key);
     }
 
     @Override
@@ -674,8 +745,15 @@ public class SchemaImpl implements Schema {
 
     @Override
     public Schema addRequired(final String required) {
-        (_required = _required == null ? new ArrayList<>() : _required).add(required);
+        if (required != null) {
+            (_required = _required == null ? new ArrayList<>() : _required).add(required);
+        }
         return this;
+    }
+
+    @Override
+    public void removeRequired(final String required) {
+        _required.remove(required);
     }
 
     @Override

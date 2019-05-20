@@ -19,6 +19,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.security.OAuthFlow;
@@ -38,6 +39,7 @@ public class OAuthFlowsImpl implements OAuthFlows {
     private OAuthFlow _password;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -48,8 +50,14 @@ public class OAuthFlowsImpl implements OAuthFlows {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public OAuthFlows addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override

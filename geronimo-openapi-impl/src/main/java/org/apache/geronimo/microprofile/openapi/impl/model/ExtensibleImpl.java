@@ -21,28 +21,39 @@ import java.util.Map;
 import java.util.Objects;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 
 @Vetoed
-public class ExtensibleImpl implements Extensible {
+public class ExtensibleImpl<T extends Extensible<T>> implements Extensible<T> {
 
     private Map<String, Object> _extensions;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensions;
     }
 
     @Override
-    public void setExtensions(final Map<String, Object> _extensions) {
-        this._extensions = _extensions;
+    public T addExtension(final String key, final Object _extensions) {
+        if (_extensions == null) {
+            return (T) this;
+        }
+        (this._extensions = this._extensions == null ? new LinkedHashMap<>() : this._extensions)
+                .put((key.startsWith("x-") ? key : ("x-" + key)), _extensions);
+        return (T) this;
     }
 
     @Override
-    public void addExtension(final String key, final Object _extensions) {
-        (this._extensions = this._extensions == null ? new LinkedHashMap<>() : this._extensions)
-                .put((key.startsWith("x-") ? key : ("x-" + key)), _extensions);
+    public void removeExtension(final String name) {
+        _extensions.remove(name);
+    }
+
+    @Override
+    public void setExtensions(final Map<String, Object> _extensions) {
+        this._extensions = _extensions;
     }
 
     @Override

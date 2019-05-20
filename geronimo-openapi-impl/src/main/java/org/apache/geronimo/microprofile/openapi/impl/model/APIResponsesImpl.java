@@ -17,23 +17,44 @@
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbTransient;
 
+import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.responses.APIResponse;
 import org.eclipse.microprofile.openapi.models.responses.APIResponses;
 
 @Vetoed
-public class APIResponsesImpl extends LinkedHashMap<String, APIResponse> implements APIResponses {
+public class APIResponsesImpl extends APIMap<String, APIResponse> implements APIResponses {
+    private Extensible<APIResponse> _extensible = new ExtensibleImpl<>();
 
     public APIResponses addAPIResponse(final String name, final APIResponse item) {
         return addApiResponse(name, item);
     }
 
     @Override
+    public void removeAPIResponse(final String name) {
+        remove(name);
+    }
+
+    @Override
+    public Map<String, APIResponse> getAPIResponses() {
+        return new LinkedHashMap<>(this);
+    }
+
+    @Override
+    public void setAPIResponses(final Map<String, APIResponse> items) {
+        clear();
+        putAll(items);
+    }
+
+    @Override
     public APIResponses addApiResponse(final String name, final APIResponse item) {
-        this.put(name, item);
+        if (item != null) {
+            super.put(name, item);
+        }
         return this;
     }
 
@@ -44,13 +65,44 @@ public class APIResponsesImpl extends LinkedHashMap<String, APIResponse> impleme
     }
 
     @Override
+    public APIResponse getDefaultValue() {
+        return getDefault();
+    }
+
+    @Override
     public void setDefaultValue(final APIResponse _defaultValue) {
-        addApiResponse("default", _defaultValue);
+        if (_defaultValue == null) {
+            removeAPIResponse(APIResponses.DEFAULT);
+        } else {
+            addApiResponse(APIResponses.DEFAULT, _defaultValue);
+        }
     }
 
     @Override
     public APIResponses defaultValue(final APIResponse _defaultValue) {
         setDefaultValue(_defaultValue);
         return this;
+    }
+
+    @Override
+    @JsonbTransient
+    public Map<String, Object> getExtensions() {
+        return _extensible.getExtensions();
+    }
+
+    @Override
+    public APIResponses addExtension(final String name, final Object value) {
+        _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
+    }
+
+    @Override
+    public void setExtensions(final Map<String, Object> extensions) {
+        _extensible.setExtensions(extensions);
     }
 }

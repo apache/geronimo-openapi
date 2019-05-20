@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
@@ -68,6 +69,7 @@ public class ComponentsImpl implements Components {
     private Map<String, SecurityScheme> _securitySchemes;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -78,8 +80,14 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Components addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -100,7 +108,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addCallback(final String key, final Callback _callbacks) {
-        (this._callbacks = this._callbacks == null ? new LinkedHashMap<>() : this._callbacks).put(key, _callbacks);
+        if (_callbacks != null) {
+            (this._callbacks = this._callbacks == null ? new LinkedHashMap<>() : this._callbacks).put(key, _callbacks);
+        }
         return this;
     }
 
@@ -122,7 +132,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addExample(final String key, final Example _examples) {
-        (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
+        if (_examples != null) {
+            (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
+        }
         return this;
     }
 
@@ -144,7 +156,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addHeader(final String key, final Header _headers) {
-        (this._headers = this._headers == null ? new LinkedHashMap<>() : this._headers).put(key, _headers);
+        if (_headers != null) {
+            (this._headers = this._headers == null ? new LinkedHashMap<>() : this._headers).put(key, _headers);
+        }
         return this;
     }
 
@@ -166,7 +180,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addLink(final String key, final Link _links) {
-        (this._links = this._links == null ? new LinkedHashMap<>() : this._links).put(key, _links);
+        if (_links != null) {
+            (this._links = this._links == null ? new LinkedHashMap<>() : this._links).put(key, _links);
+        }
         return this;
     }
 
@@ -188,7 +204,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addParameter(final String key, final Parameter _parameters) {
-        (this._parameters = this._parameters == null ? new LinkedHashMap<>() : this._parameters).put(key, _parameters);
+        if (_parameters != null) {
+            (this._parameters = this._parameters == null ? new LinkedHashMap<>() : this._parameters).put(key, _parameters);
+        }
         return this;
     }
 
@@ -210,8 +228,10 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addRequestBody(final String key, final RequestBody _requestBodies) {
-        (this._requestBodies = this._requestBodies == null ? new LinkedHashMap<>() : this._requestBodies).put(key,
-                _requestBodies);
+        if (_requestBodies != null) {
+            (this._requestBodies = this._requestBodies == null ? new LinkedHashMap<>() : this._requestBodies).put(key,
+                    _requestBodies);
+        }
         return this;
     }
 
@@ -233,7 +253,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addResponse(final String key, final APIResponse _responses) {
-        (this._responses = this._responses == null ? new LinkedHashMap<>() : this._responses).put(key, _responses);
+        if (_responses != null) {
+            (this._responses = this._responses == null ? new LinkedHashMap<>() : this._responses).put(key, _responses);
+        }
         return this;
     }
 
@@ -255,7 +277,9 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addSchema(final String key, final Schema _schemas) {
-        (this._schemas = this._schemas == null ? new LinkedHashMap<>() : this._schemas).put(key, _schemas);
+        if (_schemas != null) {
+            (this._schemas = this._schemas == null ? new LinkedHashMap<>() : this._schemas).put(key, _schemas);
+        }
         return this;
     }
 
@@ -277,8 +301,55 @@ public class ComponentsImpl implements Components {
 
     @Override
     public Components addSecurityScheme(final String key, final SecurityScheme _securitySchemes) {
-        (this._securitySchemes = this._securitySchemes == null ? new LinkedHashMap<>() : this._securitySchemes).put(key,
-                _securitySchemes);
+        if (_securitySchemes != null) {
+            (this._securitySchemes = this._securitySchemes == null ? new LinkedHashMap<>() : this._securitySchemes).put(key,
+                    _securitySchemes);
+        }
         return this;
+    }
+
+    @Override
+    public void removeSchema(final String key) {
+        _schemas.remove(key);
+    }
+
+    @Override
+    public void removeResponse(final String key) {
+        _responses.remove(key);
+    }
+
+    @Override
+    public void removeParameter(final String key) {
+        _parameters.remove(key);
+    }
+
+    @Override
+    public void removeExample(final String key) {
+        _examples.remove(key);
+    }
+
+    @Override
+    public void removeRequestBody(final String key) {
+        _requestBodies.remove(key);
+    }
+
+    @Override
+    public void removeHeader(final String key) {
+        _headers.remove(key);
+    }
+
+    @Override
+    public void removeSecurityScheme(final String key) {
+        _securitySchemes.remove(key);
+    }
+
+    @Override
+    public void removeLink(final String key) {
+        _links.remove(key);
+    }
+
+    @Override
+    public void removeCallback(final String key) {
+        _callbacks.remove(key);
     }
 }

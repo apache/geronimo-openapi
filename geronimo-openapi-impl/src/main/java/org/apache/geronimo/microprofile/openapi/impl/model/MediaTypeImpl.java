@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
@@ -48,6 +49,7 @@ public class MediaTypeImpl implements MediaType {
     private Schema _schema;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -58,8 +60,14 @@ public class MediaTypeImpl implements MediaType {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public MediaType addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -80,8 +88,15 @@ public class MediaTypeImpl implements MediaType {
 
     @Override
     public MediaType addEncoding(final String key, final Encoding _encoding) {
-        (this._encoding = this._encoding == null ? new LinkedHashMap<>() : this._encoding).put(key, _encoding);
+        if (_encoding != null) {
+            (this._encoding = this._encoding == null ? new LinkedHashMap<>() : this._encoding).put(key, _encoding);
+        }
         return this;
+    }
+
+    @Override
+    public void removeEncoding(final String key) {
+        _encoding.remove(key);
     }
 
     @Override
@@ -118,13 +133,20 @@ public class MediaTypeImpl implements MediaType {
 
     @Override
     public MediaType addExample(final String key, final Example _examples) {
-        (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
+        if (_examples != null) {
+            (this._examples = this._examples == null ? new LinkedHashMap<>() : this._examples).put(key, _examples);
+        }
         return this;
     }
 
     @Override
+    public void removeExample(final String key) {
+        _examples.remove(key);
+    }
+
+    @Override
     public Schema getSchema() {
-        return _schema;
+        return _schema != null ? _schema : (_schema = new SchemaImpl());
     }
 
     @Override

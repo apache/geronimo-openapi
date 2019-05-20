@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.ExternalDocumentation;
@@ -34,6 +35,7 @@ public class ExternalDocumentationImpl implements ExternalDocumentation {
     private String _url;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -44,8 +46,14 @@ public class ExternalDocumentationImpl implements ExternalDocumentation {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public ExternalDocumentation addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override

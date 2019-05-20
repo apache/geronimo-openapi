@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.ExternalDocumentation;
@@ -62,6 +63,7 @@ public class OperationImpl implements Operation {
     private List<String> _tags;
 
     @Override
+    @JsonbTransient
     public Map<String, Object> getExtensions() {
         return _extensible.getExtensions();
     }
@@ -72,8 +74,14 @@ public class OperationImpl implements Operation {
     }
 
     @Override
-    public void addExtension(final String name, final Object value) {
+    public Operation addExtension(final String name, final Object value) {
         _extensible.addExtension(name, value);
+        return this;
+    }
+
+    @Override
+    public void removeExtension(final String name) {
+        _extensible.removeExtension(name);
     }
 
     @Override
@@ -174,7 +182,9 @@ public class OperationImpl implements Operation {
 
     @Override
     public Operation addParameter(final Parameter _parameters) {
-        (this._parameters = this._parameters == null ? new ArrayList<>() : this._parameters).add(_parameters);
+        if (_parameters != null) {
+            (this._parameters = this._parameters == null ? new ArrayList<>() : this._parameters).add(_parameters);
+        }
         return this;
     }
 
@@ -228,7 +238,9 @@ public class OperationImpl implements Operation {
 
     @Override
     public Operation addSecurityRequirement(final SecurityRequirement _security) {
-        (this._security = this._security == null ? new ArrayList<>() : this._security).add(_security);
+        if (_security != null) {
+            (this._security = this._security == null ? new ArrayList<>() : this._security).add(_security);
+        }
         return this;
     }
 
@@ -290,5 +302,38 @@ public class OperationImpl implements Operation {
     public Operation addTag(final String tag) {
         (_tags = _tags == null ? new ArrayList<>() : _tags).add(tag);
         return this;
+    }
+
+    @Override
+    public void removeTag(final String tag) {
+        _tags.remove(tag);
+    }
+
+    @Override
+    public void removeParameter(final Parameter parameter) {
+        _parameters.remove(parameter);
+    }
+
+    @Override
+    public Operation addCallback(final String key, final Callback callback) {
+        if (callback != null) {
+            _callbacks.put(key, callback);
+        }
+        return this;
+    }
+
+    @Override
+    public void removeCallback(final String key) {
+        _callbacks.remove(key);
+    }
+
+    @Override
+    public void removeSecurityRequirement(final SecurityRequirement securityRequirement) {
+        _security.remove(securityRequirement);
+    }
+
+    @Override
+    public void removeServer(final Server server) {
+        _servers.remove(server);
     }
 }
