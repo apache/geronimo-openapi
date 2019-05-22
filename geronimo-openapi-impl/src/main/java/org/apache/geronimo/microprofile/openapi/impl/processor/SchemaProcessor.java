@@ -304,7 +304,9 @@ public class SchemaProcessor {
     private void mergeSchema(final Supplier<Components> components,
                              final org.eclipse.microprofile.openapi.models.media.Schema impl,
                              final Schema schema) {
-        impl.deprecated(schema.deprecated());
+        if (schema.deprecated()) {
+            impl.deprecated(schema.deprecated());
+        }
         if (schema.type() != SchemaType.DEFAULT) {
             impl.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.valueOf(schema.type().name()));
         }
@@ -344,18 +346,24 @@ public class SchemaProcessor {
         }
         impl.minimum(toBigDecimal(schema.minimum()));
         impl.maximum(toBigDecimal(schema.maximum()));
-        impl.exclusiveMinimum(schema.exclusiveMinimum());
-        impl.exclusiveMaximum(schema.exclusiveMaximum());
-        if (schema.minLength() >= 0) {
+        if (schema.exclusiveMinimum()) {
+            impl.exclusiveMinimum(schema.exclusiveMinimum());
+        }
+        if (schema.exclusiveMaximum()) {
+            impl.exclusiveMaximum(schema.exclusiveMaximum());
+        }
+        if (schema.minLength() >= 0 && schema.minLength() != 0) {
             impl.minLength(schema.minLength());
         }
-        if (schema.maxLength() >= 0) {
+        if (schema.maxLength() >= 0 && schema.maxLength() != Integer.MAX_VALUE) {
             impl.maxLength(schema.maxLength());
         }
         if (!schema.pattern().isEmpty()) {
             impl.pattern(schema.pattern());
         }
-        impl.nullable(schema.nullable());
+        if (schema.nullable()) {
+            impl.nullable(schema.nullable());
+        }
         if (schema.minProperties() > 0) {
             impl.minProperties(schema.minProperties());
         }
@@ -368,9 +376,15 @@ public class SchemaProcessor {
         if (schema.maxItems() > Integer.MIN_VALUE) {
             impl.maxItems(schema.maxItems());
         }
-        impl.uniqueItems(schema.uniqueItems());
-        impl.readOnly(schema.readOnly());
-        impl.writeOnly(schema.writeOnly());
+        if (schema.uniqueItems()) {
+            impl.uniqueItems(schema.uniqueItems());
+        }
+        if (schema.readOnly()) {
+            impl.readOnly(schema.readOnly());
+        }
+        if (schema.writeOnly()) {
+            impl.writeOnly(schema.writeOnly());
+        }
         impl.defaultValue(toType(schema.defaultValue(), impl.getType()));
         final List<String> required = Stream.of(schema.requiredProperties()).collect(toList());
         if (!required.isEmpty()) {
