@@ -34,6 +34,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -143,6 +144,7 @@ public class AnnotationProcessor {
     private final SchemaProcessor schemaProcessor;
     private final NamingStrategy operationNamingStrategy;
     private final JsonReaderFactory jsonReaderFactory;
+    private final Collection<String> operationId = new HashSet<>();
 
     public AnnotationProcessor(final GeronimoOpenAPIConfig config, final NamingStrategy strategy,
                                final JsonReaderFactory factory) {
@@ -256,7 +258,7 @@ public class AnnotationProcessor {
             if (!op.operationId().isEmpty()) {
                 operation.operationId(op.operationId());
             } else {
-                operation.operationId(operationNamingStrategy.name(new NamingStrategy.Context(m, httpVerb, path)));
+                operation.operationId(createOperationId(m, httpVerb, path));
             }
             if (!op.summary().isEmpty()) {
                 operation.summary(op.summary());
@@ -266,7 +268,7 @@ public class AnnotationProcessor {
                 operation.description(op.description());
             }
         } else {
-            operation.operationId(operationNamingStrategy.name(new NamingStrategy.Context(m, httpVerb, path)));
+            operation.operationId(createOperationId(m, httpVerb, path));
         }
 
         final Optional<String> servers = ofNullable(config.read(OASConfig.SERVERS_OPERATION_PREFIX + operation.getOperationId(), null));
@@ -303,7 +305,7 @@ public class AnnotationProcessor {
                      .map(it -> of(it.name())
                             .filter(v -> !v.isEmpty())
                             .map(tag -> {
-                                api.getTags().add(mapTag(it));
+                                api.addTag(mapTag(it));
                                 return tag;
                             }).filter(v -> !v.isEmpty())
                             .orElseGet(() -> {
@@ -432,6 +434,16 @@ public class AnnotationProcessor {
             responses.defaultValue(defaultResponse);
         }
         return operation;
+    }
+
+    private String createOperationId(final AnnotatedMethodElement m, final String httpVerb, final String path) {
+        String name = operationNamingStrategy.name(new NamingStrategy.Context(m, httpVerb, path));
+        int idx = 1;
+        while (!operationId.add(name)) {
+            name = name + "_" + idx;
+            idx++;
+        }
+        return name;
     }
 
     private boolean findAnnotatedParameterByName(final org.eclipse.microprofile.openapi.models.parameters.Parameter it,
@@ -1124,6 +1136,10 @@ public class AnnotationProcessor {
                 .filter(it -> !"/".equals(it))
                 .map(it -> it.endsWith("*") ? it.substring(0, it.length() - 1) : it)
                 .orElse("");
+    }
+
+    public void beforeProcessing() {
+        operationId.clear();
     }
 
     private static class TagAnnotation implements Tag {

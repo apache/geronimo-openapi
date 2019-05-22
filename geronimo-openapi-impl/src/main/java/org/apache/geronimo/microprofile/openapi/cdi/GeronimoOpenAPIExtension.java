@@ -178,6 +178,7 @@ public class GeronimoOpenAPIExtension implements Extension {
         }
 
         final String base = contextPath + processor.getApplicationBinding(application);
+        processor.beforeProcessing();
         beans.filter(c -> (excludeClasses == null || !excludeClasses.contains(c.getName())))
                 .filter(c -> (excludePackages == null || excludePackages.stream().noneMatch(it -> c.getName().startsWith(it))))
                 .map(beanManager::createAnnotatedType)
