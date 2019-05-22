@@ -16,6 +16,8 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
+import static java.util.stream.Collectors.toList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -294,13 +296,16 @@ public class OperationImpl implements Operation {
 
     @Override
     public Operation tags(final List<String> _tags) {
-        setTags(_tags);
+        setTags(_tags == null ? null : _tags.stream().distinct().collect(toList()));
         return this;
     }
 
     @Override
     public Operation addTag(final String tag) {
-        (_tags = _tags == null ? new ArrayList<>() : _tags).add(tag);
+        final List<String> tags = _tags = _tags == null ? new ArrayList<>() : _tags;
+        if (!tags.contains(tag)) {
+            tags.add(tag);
+        }
         return this;
     }
 

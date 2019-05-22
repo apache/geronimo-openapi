@@ -16,6 +16,8 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.model;
 
+import static java.util.stream.Collectors.toList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -223,7 +225,7 @@ public class OpenAPIImpl implements OpenAPI {
 
     @Override
     public void setTags(final List<Tag> _tags) {
-        this._tags = _tags;
+        this._tags = _tags == null ? null : _tags.stream().distinct().collect(toList());
     }
 
     @Override
