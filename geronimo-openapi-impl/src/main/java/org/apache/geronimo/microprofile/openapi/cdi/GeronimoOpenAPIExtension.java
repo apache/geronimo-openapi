@@ -42,6 +42,7 @@ import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessBean;
+import javax.servlet.ServletContext;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
@@ -168,7 +169,15 @@ public class GeronimoOpenAPIExtension implements Extension {
             return api.paths(new PathsImpl());
         }
 
-        final String base = processor.getApplicationBinding(application);
+        // adds the context path to the base
+        final Instance<ServletContext> servletContextInstance = current.select(ServletContext.class);
+        final boolean appendContextPath = Boolean.valueOf(config.read("application.append-context-path", "true"));
+        String contextPath = "";
+        if (appendContextPath && servletContextInstance.isResolvable()) {
+            contextPath = servletContextInstance.get().getContextPath();
+        }
+
+        final String base = contextPath + processor.getApplicationBinding(application);
         beans.filter(c -> (excludeClasses == null || !excludeClasses.contains(c.getName())))
                 .filter(c -> (excludePackages == null || excludePackages.stream().noneMatch(it -> c.getName().startsWith(it))))
                 .map(beanManager::createAnnotatedType)
