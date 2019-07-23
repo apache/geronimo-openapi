@@ -42,6 +42,11 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import javax.json.JsonArray;
+import javax.json.JsonNumber;
+import javax.json.JsonObject;
+import javax.json.JsonString;
+import javax.json.JsonValue;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.ws.rs.core.Response;
 
@@ -101,18 +106,26 @@ public class SchemaProcessor {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN);
             } else if (Boolean.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.BOOLEAN).nullable(true);
-            } else if (String.class == model) {
+            } else if (String.class == model || JsonString.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING);
             } else if (double.class == model || float.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.NUMBER);
-            } else if (Double.class == model || Float.class == model) {
+            } else if (Double.class == model || Float.class == model || JsonNumber.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.NUMBER).nullable(true);
             } else if (int.class == model || short.class == model || byte.class == model || long.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.INTEGER);
             } else if (Integer.class == model || Short.class == model || Byte.class == model || Long.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.INTEGER).nullable(true);
-            } else if (Response.class == model) {
-                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT).nullable(true);
+            } else if (Response.class == model || JsonObject.class == model || JsonValue.class == model) {
+                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT)
+                        .nullable(true)
+                        .properties(new HashMap<>());
+            } else if (JsonArray.class == model) {
+                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY)
+                        .nullable(true)
+                        .items(new SchemaImpl()
+                                .type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT)
+                                .properties(new HashMap<>()));
             } else if (isStringable(model)) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING).nullable(true);
             } else {

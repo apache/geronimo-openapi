@@ -173,7 +173,7 @@ public class GeronimoOpenAPIExtension implements Extension {
         final Instance<ServletContext> servletContextInstance = current.select(ServletContext.class);
         final boolean appendContextPath = Boolean.valueOf(config.read("application.append-context-path", "true"));
         String contextPath = "";
-        if (appendContextPath && servletContextInstance.isResolvable()) {
+        if (appendContextPath && !servletContextInstance.isAmbiguous() && !servletContextInstance.isUnsatisfied()) {
             contextPath = servletContextInstance.get().getContextPath();
         }
 
@@ -196,7 +196,7 @@ public class GeronimoOpenAPIExtension implements Extension {
             final Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(value.trim());
             try {
                 final Instance<?> instance = current.select(clazz);
-                if (instance.isResolvable()) {
+                if (!instance.isAmbiguous() && !instance.isUnsatisfied()) { // isResolvable is not always there
                     return instance.get();
                 }
             } catch (final RuntimeException e) {

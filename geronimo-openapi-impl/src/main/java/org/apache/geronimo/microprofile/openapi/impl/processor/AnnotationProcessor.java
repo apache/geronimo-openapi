@@ -287,7 +287,14 @@ public class AnnotationProcessor {
         });
 
         ofNullable(m.getAnnotation(SecurityScheme.class))
-                .ifPresent(s -> api.getComponents().addSecurityScheme(s.ref(), mapSecurityScheme(s)));
+                .ifPresent(s -> {
+                    org.eclipse.microprofile.openapi.models.Components components = api.getComponents();
+                    if (components == null) {
+                        components = new ComponentsImpl();
+                        api.setComponents(components);
+                    }
+                    components.addSecurityScheme(s.ref(), mapSecurityScheme(s));
+                });
 
         ofNullable(m.getAnnotationsByType(Extension.class))
                 .map(this::mapExtensions)

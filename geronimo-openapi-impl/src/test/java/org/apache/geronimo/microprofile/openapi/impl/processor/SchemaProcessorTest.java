@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
 import javax.json.bind.annotation.JsonbProperty;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
@@ -34,6 +37,17 @@ import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.testng.annotations.Test;
 
 public class SchemaProcessorTest {
+    @Test
+    public void mapJsonp() {
+        Stream.of(JsonValue.class, JsonObject.class).forEach(it -> {
+            final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), JsonValue.class);
+            assertEquals(schema.getProperties().size(), 0);
+            assertEquals(Schema.SchemaType.OBJECT, schema.getType());
+        });
+        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), JsonArray.class);
+        assertEquals(Schema.SchemaType.ARRAY, schema.getType());
+    }
+
     @Test
     public void mapImplicit() {
         final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), Data.class);
