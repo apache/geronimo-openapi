@@ -53,15 +53,6 @@
     <johnzon.version>1.1.13</johnzon.version>
   </properties>
 
-  <profiles>
-    <profile>
-      <id>johnzon.next</id>
-      <properties>
-        <johnzon.version>1.2.0-SNAPSHOT</johnzon.version>
-      </properties>
-    </profile>
-  </profiles>
-
   <dependencyManagement>
     <dependencies>
       <dependency>
