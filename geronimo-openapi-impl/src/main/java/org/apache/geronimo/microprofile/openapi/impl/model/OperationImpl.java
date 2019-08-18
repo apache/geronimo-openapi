@@ -19,6 +19,7 @@ package org.apache.geronimo.microprofile.openapi.impl.model;
 import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -322,6 +323,9 @@ public class OperationImpl implements Operation {
     @Override
     public Operation addCallback(final String key, final Callback callback) {
         if (callback != null) {
+            if (_callbacks == null) {
+                _callbacks = new HashMap<>();
+            }
             _callbacks.put(key, callback);
         }
         return this;

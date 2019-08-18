@@ -41,31 +41,23 @@ public class ComponentsImpl implements Components {
 
     private Extensible _extensible = new ExtensibleImpl();
 
-    @JsonbTypeDeserializer(Deserializers.MapCallbacksDeserializer.class)
     private Map<String, Callback> _callbacks;
 
-    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     private Map<String, Example> _examples;
 
-    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     private Map<String, Header> _headers;
 
-    @JsonbTypeDeserializer(Deserializers.MapLinksDeserializer.class)
     private Map<String, Link> _links;
 
-    @JsonbTypeDeserializer(Deserializers.MapParametersDeserializer.class)
     private Map<String, Parameter> _parameters;
 
-    @JsonbTypeDeserializer(Deserializers.MapRequestBodiesDeserializer.class)
     private Map<String, RequestBody> _requestBodies;
 
-    @JsonbTypeDeserializer(Deserializers.MapAPIResponsesDeserializer.class)
     private Map<String, APIResponse> _responses;
 
-    @JsonbTypeDeserializer(Deserializers.MapSchemasDeserializer.class)
+
     private Map<String, Schema> _schemas;
 
-    @JsonbTypeDeserializer(Deserializers.MapSecuritySchemesDeserializer.class)
     private Map<String, SecurityScheme> _securitySchemes;
 
     @Override
@@ -96,6 +88,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapCallbacksDeserializer.class)
     public void setCallbacks(final Map<String, Callback> _callbacks) {
         this._callbacks = _callbacks;
     }
@@ -120,6 +113,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     public void setExamples(final Map<String, Example> _examples) {
         this._examples = _examples;
     }
@@ -144,6 +138,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     public void setHeaders(final Map<String, Header> _headers) {
         this._headers = _headers;
     }
@@ -168,6 +163,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapLinksDeserializer.class)
     public void setLinks(final Map<String, Link> _links) {
         this._links = _links;
     }
@@ -192,6 +188,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapParametersDeserializer.class)
     public void setParameters(final Map<String, Parameter> _parameters) {
         this._parameters = _parameters;
     }
@@ -216,6 +213,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapRequestBodiesDeserializer.class)
     public void setRequestBodies(final Map<String, RequestBody> _requestBodies) {
         this._requestBodies = _requestBodies;
     }
@@ -241,6 +239,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapAPIResponsesDeserializer.class)
     public void setResponses(final Map<String, APIResponse> _responses) {
         this._responses = _responses;
     }
@@ -265,6 +264,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapSchemasDeserializer.class)
     public void setSchemas(final Map<String, Schema> _schemas) {
         this._schemas = _schemas;
     }
@@ -289,6 +289,7 @@ public class ComponentsImpl implements Components {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapSecuritySchemesDeserializer.class)
     public void setSecuritySchemes(final Map<String, SecurityScheme> _securitySchemes) {
         this._securitySchemes = _securitySchemes;
     }

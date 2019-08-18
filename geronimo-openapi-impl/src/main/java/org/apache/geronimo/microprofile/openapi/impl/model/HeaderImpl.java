@@ -48,7 +48,6 @@ public class HeaderImpl implements Header {
 
     private Object _example;
 
-    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     private Map<String, Example> _examples;
 
     private Boolean _explode;
@@ -158,6 +157,7 @@ public class HeaderImpl implements Header {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     public void setExample(final Object _example) {
         this._example = _example;
     }

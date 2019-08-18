@@ -20,10 +20,20 @@ import static org.junit.Assert.assertEquals;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
+import javax.json.bind.config.PropertyOrderStrategy;
 
 import org.apache.geronimo.microprofile.openapi.impl.loader.yaml.Yaml;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.CallbackImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.InfoImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.OperationImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.PathItemImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.PathsImpl;
+import org.eclipse.microprofile.openapi.models.OpenAPI;
+import org.eclipse.microprofile.openapi.models.PathItem;
 import org.eclipse.microprofile.openapi.models.responses.APIResponses;
 import org.testng.annotations.Test;
 
@@ -32,10 +42,27 @@ public class SerializationTest {
     public void defaultResponse() throws Exception {
         final APIResponses responses = new APIResponsesImpl()
                 .defaultValue(new APIResponseImpl().description("test"))
-                .addApiResponse("200", new APIResponseImpl().description("ok"));
+                .addAPIResponse("200", new APIResponseImpl().description("ok"));
         try (final Jsonb jsonb = JsonbBuilder.create()) {
             assertEquals("{\"default\":{\"description\":\"test\"},\"200\":{\"description\":\"ok\"}}", jsonb.toJson(responses));
         }
         assertEquals("---\ndefault:\n  description: \"test\"\n200:\n  description: \"ok\"\n", Yaml.getObjectMapper().writeValueAsString(responses));
+    }
+
+    @Test
+    public void serialize() throws Exception {
+        final PathItem item = new PathItemImpl();
+        item.setGET(new OperationImpl().addCallback("onData", new CallbackImpl()
+                .addPathItem("{$request.query.callbackUrl}/data", new PathItemImpl())));
+
+        final OpenAPI api = new OpenAPIImpl()
+                .info(new InfoImpl().version("3.0.0"))
+                .paths(new PathsImpl().addPathItem("/foo", item));
+
+        // identify some jsonb issues with serializers early (exception)
+        try (final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig()
+                .withPropertyOrderStrategy(PropertyOrderStrategy.LEXICOGRAPHICAL))) {
+            jsonb.toJson(api);
+        }
     }
 }

@@ -50,8 +50,17 @@
     <arquillian.version>1.1.14.Final</arquillian.version>
     <testng.version>6.9.9</testng.version>
     <jackson.version>2.9.8</jackson.version>
-    <johnzon.version>1.1.12</johnzon.version>
+    <johnzon.version>1.1.13</johnzon.version>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>johnzon.next</id>
+      <properties>
+        <johnzon.version>1.2.0-SNAPSHOT</johnzon.version>
+      </properties>
+    </profile>
+  </profiles>
 
   <dependencyManagement>
     <dependencies>
@@ -68,6 +77,11 @@
       <dependency>
         <groupId>org.apache.johnzon</groupId>
         <artifactId>johnzon-jsonb</artifactId>
+        <version>${johnzon.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.johnzon</groupId>
+        <artifactId>johnzon-jaxrs</artifactId>
         <version>${johnzon.version}</version>
       </dependency>
       <dependency>
@@ -140,14 +154,14 @@
       <dependency>
         <groupId>org.apache.tomcat</groupId>
         <artifactId>tomcat-servlet-api</artifactId>
-        <version>9.0.16</version>
+        <version>9.0.24</version>
         <scope>provided</scope>
       </dependency>
 
       <dependency>
         <groupId>org.apache.cxf</groupId>
         <artifactId>cxf-integration-cdi</artifactId>
-        <version>3.3.1</version>
+        <version>3.3.3</version>
         <scope>provided</scope>
         <optional>true</optional>
         <exclusions>

@@ -21,11 +21,9 @@ import java.util.Map;
 
 import javax.enterprise.inject.Vetoed;
 import javax.json.bind.annotation.JsonbTransient;
-import javax.json.bind.annotation.JsonbTypeAdapter;
 import javax.json.bind.annotation.JsonbTypeDeserializer;
 
 import org.apache.geronimo.microprofile.openapi.impl.model.codec.Deserializers;
-import org.apache.geronimo.microprofile.openapi.impl.model.codec.Serializers;
 import org.eclipse.microprofile.openapi.models.Extensible;
 import org.eclipse.microprofile.openapi.models.examples.Example;
 import org.eclipse.microprofile.openapi.models.media.Encoding;
@@ -37,15 +35,12 @@ public class MediaTypeImpl implements MediaType {
 
     private Extensible _extensible = new ExtensibleImpl();
 
-    @JsonbTypeDeserializer(Deserializers.MapEncodingsDeserializer.class)
     private Map<String, Encoding> _encoding;
 
     private Object _example;
 
-    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     private Map<String, Example> _examples;
 
-    @JsonbTypeAdapter(Serializers.SchemaTypeSerializer.class)
     private Schema _schema;
 
     @Override
@@ -76,6 +71,7 @@ public class MediaTypeImpl implements MediaType {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapEncodingsDeserializer.class)
     public void setEncoding(final Map<String, Encoding> _encoding) {
         this._encoding = _encoding;
     }
@@ -105,6 +101,7 @@ public class MediaTypeImpl implements MediaType {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapExamplesDeserializer.class)
     public void setExample(final Object _example) {
         this._example = _example;
     }

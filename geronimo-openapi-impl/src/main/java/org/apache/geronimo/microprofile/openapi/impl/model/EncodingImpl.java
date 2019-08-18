@@ -40,7 +40,6 @@ public class EncodingImpl implements Encoding {
 
     private Boolean _explode;
 
-    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     private Map<String, Header> _headers;
 
     private Style _style;
@@ -121,6 +120,7 @@ public class EncodingImpl implements Encoding {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     public void setHeaders(final Map<String, Header> _headers) {
         this._headers = _headers;
     }

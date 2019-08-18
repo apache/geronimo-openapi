@@ -39,10 +39,8 @@ public class APIResponseImpl implements APIResponse {
 
     private String _description;
 
-    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     private Map<String, Header> _headers;
 
-    @JsonbTypeDeserializer(Deserializers.MapLinksDeserializer.class)
     private Map<String, Link> _links;
 
     private String _ref;
@@ -117,6 +115,7 @@ public class APIResponseImpl implements APIResponse {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapHeadersDeserializer.class)
     public void setHeaders(final Map<String, Header> _headers) {
         this._headers = _headers;
     }
@@ -141,6 +140,7 @@ public class APIResponseImpl implements APIResponse {
     }
 
     @Override
+    @JsonbTypeDeserializer(Deserializers.MapLinksDeserializer.class)
     public void setLinks(final Map<String, Link> _links) {
         this._links = _links;
     }
