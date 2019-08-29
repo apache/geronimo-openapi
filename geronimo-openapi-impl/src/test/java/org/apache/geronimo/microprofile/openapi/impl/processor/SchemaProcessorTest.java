@@ -16,25 +16,24 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
-import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toSet;
-import static org.testng.Assert.assertEquals;
-
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
-import javax.json.bind.annotation.JsonbProperty;
-
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
 import org.apache.geronimo.microprofile.openapi.openjpa.Entity1;
 import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.testng.annotations.Test;
+
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+import javax.json.bind.annotation.JsonbProperty;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toSet;
+import static org.testng.Assert.assertEquals;
 
 public class SchemaProcessorTest {
     @Test
@@ -50,21 +49,24 @@ public class SchemaProcessorTest {
 
     @Test
     public void mapImplicit() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), Data.class);
+        Supplier<Components> components = newComponentsProvider();
+        final Schema schema = getReferredSchema(components.get(), new SchemaProcessor().mapSchemaFromClass(components, Data.class));
         assertEquals(1, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("name").getType());
     }
 
     @Test
     public void mapJsonb() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), JsonbData.class);
+        Supplier<Components> components = newComponentsProvider();
+        final Schema schema = getReferredSchema(components.get(), new SchemaProcessor().mapSchemaFromClass(components, JsonbData.class));
         assertEquals(1, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("foo").getType());
     }
 
     @Test
     public void mapEnum() {
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(newComponentsProvider(), DataWithEnum.class);
+        Supplier<Components> components = newComponentsProvider();
+        final Schema schema = getReferredSchema(components.get(), new SchemaProcessor().mapSchemaFromClass(components, DataWithEnum.class));
         assertEquals(1, schema.getProperties().size());
         final Schema anEnum = schema.getProperties().get("anEnum");
         assertEquals(Schema.SchemaType.STRING, anEnum.getType());
@@ -74,7 +76,7 @@ public class SchemaProcessorTest {
     @Test
     public void cyclicRef() {
         final Components components = new ComponentsImpl();
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClass.class);
+        final Schema schema = getReferredSchema(components, new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClass.class));
         assertEquals(3, schema.getProperties().size());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("simple").getType());
         assertSomeClass(schema.getProperties().get("child"));
@@ -83,7 +85,7 @@ public class SchemaProcessorTest {
         assertSomeRelatedClass(children.getItems());
         assertEquals(2, components.getSchemas().size());
         final Schema completeSchema =
-                components.getSchemas().get("org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass");
+            components.getSchemas().get("org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass");
         assertEquals(3, completeSchema.getProperties().size());
         assertEquals(Stream.of("simple", "child", "children").collect(toSet()), completeSchema.getProperties().keySet());
     }
@@ -91,7 +93,7 @@ public class SchemaProcessorTest {
     @Test
     public void array() {
         final Components components = new ComponentsImpl();
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassWithArray.class);
+        final Schema schema = getReferredSchema(components, new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassWithArray.class));
         assertEquals(1, schema.getProperties().size());
         final Schema array = schema.getProperties().get("thearray");
         assertEquals(Schema.SchemaType.ARRAY, array.getType());
@@ -101,7 +103,7 @@ public class SchemaProcessorTest {
     @Test
     public void clazz() {
         final Components components = new ComponentsImpl();
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassField.class);
+        final Schema schema = getReferredSchema(components, new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassField.class));
         assertEquals(schema.getProperties().size(), 1);
         final Schema field = schema.getProperties().get("clazz");
         assertEquals(Schema.SchemaType.STRING, field.getType());
@@ -110,7 +112,7 @@ public class SchemaProcessorTest {
     @Test
     public void type() {
         final Components components = new ComponentsImpl();
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeTypeField.class);
+        final Schema schema = getReferredSchema(components, new SchemaProcessor().mapSchemaFromClass(() -> components, SomeTypeField.class));
         assertEquals(schema.getProperties().size(), 1);
         final Schema field = schema.getProperties().get("type");
         assertEquals(Schema.SchemaType.STRING, field.getType());
@@ -119,7 +121,7 @@ public class SchemaProcessorTest {
     @Test
     public void openjpa() {
         final Components components = new ComponentsImpl();
-        final Schema schema = new SchemaProcessor().mapSchemaFromClass(() -> components, Entity1.class);
+        final Schema schema = getReferredSchema(components, new SchemaProcessor().mapSchemaFromClass(() -> components, Entity1.class));
         assertEquals(schema.getProperties().size(), 4);
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("string").getType());
         assertEquals(Schema.SchemaType.INTEGER, schema.getProperties().get("id").getType());
@@ -139,7 +141,23 @@ public class SchemaProcessorTest {
 
     private void assertSomeRelatedClass(final Schema schema) {
         assertEquals(Schema.SchemaType.OBJECT, schema.getType());
-        assertEquals(Stream.of("simple", "children").collect(toSet()), schema.getProperties().keySet());
+        assertEquals("#/components/schemas/org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeRelatedClass", schema.getRef());
+    }
+
+    /**
+     * Get the referred schema, if available
+     *
+     * @param components all components
+     * @param schema     schema
+     * @return returns the referred schema or the passed one
+     */
+    private Schema getReferredSchema(Components components, Schema schema) {
+        if (schema.getRef() != null) {
+            String[] splits = schema.getRef().split("/");
+            return components.getSchemas().get(splits[splits.length - 1]);
+        }
+
+        return schema;
     }
 
     public enum AnEnum {

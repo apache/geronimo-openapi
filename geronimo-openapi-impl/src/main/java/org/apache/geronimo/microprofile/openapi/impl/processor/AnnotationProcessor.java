@@ -564,12 +564,14 @@ public class AnnotationProcessor {
         api.components(impl);
         processCallbacks(api, components.callbacks());
         if (components.schemas().length > 0) {
-            impl.schemas(Stream.of(components.schemas())
-                               .map(it -> {
-                                   final String ref = of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref());
-                                   return new SchemaWithRef(ref, mapSchema(api, it, ref));
-                               })
-                               .collect(toMap(it -> it.ref, it -> it.schema)));
+            Map<String, org.eclipse.microprofile.openapi.models.media.Schema> schemas = Stream.of(components.schemas())
+                .map(it -> {
+                    final String ref = of(it.name()).filter(n -> !n.isEmpty()).orElseGet(() -> it.ref());
+                    return new SchemaWithRef(ref, mapSchema(api, it, ref));
+                })
+                .collect(toMap(it -> it.ref, it -> it.schema));
+
+            schemas.forEach((key, value) -> impl.getSchemas().putIfAbsent(key,value));
         }
         if (components.links().length > 0) {
             impl.links(Stream.of(components.links()).collect(

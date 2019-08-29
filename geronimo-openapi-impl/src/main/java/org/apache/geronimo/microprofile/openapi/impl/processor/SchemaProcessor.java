@@ -150,40 +150,9 @@ public class SchemaProcessor {
 
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
 
-                    final org.eclipse.microprofile.openapi.models.media.Schema existingSchema = cache.get(from);
-                    if (existingSchema != null && existingSchema != schema) {
+                    final org.eclipse.microprofile.openapi.models.media.Schema objectSchema = getOrCreateReusableObjectComponent(components, from, providedRef);
+                    if (schema != objectSchema) {
                         schema.ref(toRef(from, providedRef));
-                    } else {
-                        if (cache.putIfAbsent(from, schema) == null) {
-                            components.get().addSchema(toRefName(from, providedRef), schema);
-                        }
-
-                        final Predicate<String> ignored = createIgnorePredicate(from);
-
-                        schema.properties(new HashMap<>());
-                        Class<?> current = from;
-                        while (current != null && current != Object.class) {
-                            Stream.of(current.getDeclaredFields())
-                                  .filter(it -> isVisible(it, it.getModifiers()))
-                                  .peek(f -> handleRequired(schema, f, () -> findFieldName(f)))
-                                  .forEach(f -> {
-                                      final String fieldName = findFieldName(f);
-                                      if (!ignored.test(fieldName)) {
-                                          schema.getProperties().put(fieldName, mapField(components, f, f.getGenericType()));
-                                      }
-                                  });
-                            Stream.of(current.getDeclaredMethods())
-                                  .filter(it -> isVisible(it, it.getModifiers()))
-                                  .filter(it -> (it.getName().startsWith("get") || it.getName().startsWith("is")) && it.getName().length() > 2)
-                                  .peek(m -> handleRequired(schema, m, () -> findMethodName(m)))
-                                  .forEach(m -> {
-                                      final String key = findMethodName(m);
-                                      if (!ignored.test(key) && !schema.getProperties().containsKey(key)) {
-                                          schema.getProperties().put(key, mapField(components, m, m.getGenericReturnType()));
-                                      }
-                                  });
-                            current = current.getSuperclass();
-                        }
                     }
                 }
             }
@@ -205,6 +174,63 @@ public class SchemaProcessor {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY);
             }
         }
+    }
+
+    /**
+     * Creates or get from the cache the reusable object component
+     *
+     * @param components  components, where the schema will be added, if new created
+     * @param from        the class for which we want create the schema
+     * @param providedRef providedRef
+     * @return the schema (from the cache or new created) for the given class
+     */
+    private org.eclipse.microprofile.openapi.models.media.Schema getOrCreateReusableObjectComponent(
+        final Supplier<org.eclipse.microprofile.openapi.models.Components> components,
+        final Class from,
+        final String providedRef) {
+
+        final org.eclipse.microprofile.openapi.models.media.Schema existingSchema = cache.get(from);
+        if (existingSchema != null) {
+            return existingSchema;
+        }
+
+        final SchemaImpl schema = new SchemaImpl();
+        ofNullable(from.getAnnotation(Schema.class)).ifPresent(
+            s -> sets(components, Schema.class.cast(s), schema, null));
+
+        schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
+
+        if (cache.putIfAbsent(from, schema) == null) {
+            components.get().addSchema(toRefName(from, providedRef), schema);
+        }
+
+        final Predicate<String> ignored = createIgnorePredicate(from);
+
+        schema.properties(new HashMap<>());
+        Class<?> current = from;
+        while (current != null && current != Object.class) {
+            Stream.of(current.getDeclaredFields())
+                .filter(it -> isVisible(it, it.getModifiers()))
+                .peek(f -> handleRequired(schema, f, () -> findFieldName(f)))
+                .forEach(f -> {
+                    final String fieldName = findFieldName(f);
+                    if (!ignored.test(fieldName)) {
+                        schema.getProperties().put(fieldName, mapField(components, f, f.getGenericType()));
+                    }
+                });
+            Stream.of(current.getDeclaredMethods())
+                .filter(it -> isVisible(it, it.getModifiers()))
+                .filter(it -> (it.getName().startsWith("get") || it.getName().startsWith("is")) && it.getName().length() > 2)
+                .peek(m -> handleRequired(schema, m, () -> findMethodName(m)))
+                .forEach(m -> {
+                    final String key = findMethodName(m);
+                    if (!ignored.test(key) && !schema.getProperties().containsKey(key)) {
+                        schema.getProperties().put(key, mapField(components, m, m.getGenericReturnType()));
+                    }
+                });
+            current = current.getSuperclass();
+        }
+        return schema;
     }
 
     private Predicate<String> createIgnorePredicate(final Class from) {
