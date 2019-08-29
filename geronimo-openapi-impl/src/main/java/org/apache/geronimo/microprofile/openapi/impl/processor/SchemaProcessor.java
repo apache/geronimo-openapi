@@ -23,6 +23,7 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -99,7 +100,7 @@ public class SchemaProcessor {
             final Supplier<org.eclipse.microprofile.openapi.models.Components>components,
             final Type rawModel,
             final org.eclipse.microprofile.openapi.models.media.Schema schema,
-            final String providedRef) {
+            String providedRef) {
         final Type model = unwrapType(rawModel);
         if (Class.class.isInstance(model)) {
             if (boolean.class == model) {
@@ -145,8 +146,16 @@ public class SchemaProcessor {
                     fillSchema(components, Object.class, items, null);
                     schema.items(items);
                 } else {
-                    ofNullable(from.getAnnotation(Schema.class)).ifPresent(
-                            s -> sets(components, Schema.class.cast(s), schema, null));
+                    Optional<Annotation> annotation = ofNullable(from.getAnnotation(Schema.class));
+                    if (annotation.isPresent()) {
+                        //if providedRef is null and the Schema name is not Empty, we set it as providedRef
+                        Schema schemaAnnotation = Schema.class.cast(annotation.get());
+                        String ref = schemaAnnotation.name().isEmpty() ? null : schemaAnnotation.name();
+                        if (providedRef == null) {
+                            providedRef = ref;
+                        }
+                        sets(components, schemaAnnotation, schema, ref);
+                    }
 
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
 
