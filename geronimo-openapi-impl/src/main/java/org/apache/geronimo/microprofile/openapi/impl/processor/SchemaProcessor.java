@@ -129,7 +129,7 @@ public class SchemaProcessor {
             } else if (isStringable(model)) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING).nullable(true);
             } else {
-                final Class from = Class.class.cast(model);
+                final Class<?> from = Class.class.cast(model);
                 if (from.isEnum()) {
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING)
                           .enumeration(asList(from.getEnumConstants()))
@@ -145,15 +145,15 @@ public class SchemaProcessor {
                     fillSchema(components, Object.class, items, null);
                     schema.items(items);
                 } else {
-                    Optional<Schema> annotation = ofNullable((Schema) from.getAnnotation(Schema.class));
-                    String ref = providedRef;
-                    if (annotation.isPresent()) {
-                        //if providedRef is null and the Schema name is not Empty, we set it as providedRef
-                        if (ref == null && !annotation.get().name().isEmpty() ) {
-                            ref = annotation.get().name().isEmpty() ? null : annotation.get().name();
-                        }
-                        sets(components, annotation.get(), schema, ref);
-                    }
+                    //if providedRef is null and the Schema name is not Empty, we set it as providedRef
+                    final String ref = ofNullable(from.getAnnotation(Schema.class))
+                            .filter(a -> !a.name().isEmpty())
+                            .map(s -> {
+                                final String sRef = s.name();
+                                sets(components, s, schema, sRef);
+                                return sRef;
+                            })
+                            .orElse(providedRef);
 
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
 
