@@ -16,24 +16,25 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
-import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
-import org.apache.geronimo.microprofile.openapi.openjpa.Entity1;
-import org.eclipse.microprofile.openapi.models.Components;
-import org.eclipse.microprofile.openapi.models.media.Schema;
-import org.testng.annotations.Test;
+import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toSet;
+import static org.testng.Assert.assertEquals;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
-import javax.json.bind.annotation.JsonbProperty;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toSet;
-import static org.testng.Assert.assertEquals;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+import javax.json.bind.annotation.JsonbProperty;
+
+import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
+import org.apache.geronimo.microprofile.openapi.openjpa.Entity1;
+import org.eclipse.microprofile.openapi.models.Components;
+import org.eclipse.microprofile.openapi.models.media.Schema;
+import org.testng.annotations.Test;
 
 public class SchemaProcessorTest {
     @Test
@@ -112,7 +113,11 @@ public class SchemaProcessorTest {
     @Test
     public void type() {
         final Components components = new ComponentsImpl();
-        final Schema schema = getReferredSchema(components, new SchemaProcessor().mapSchemaFromClass(() -> components, SomeTypeField.class));
+        Schema refSchema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeTypeField.class);
+        //verify that return schema has ref to the actual schema in the components
+        assertEquals("#/components/schemas/org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeTypeField", refSchema.getRef());
+
+        final Schema schema = getReferredSchema(components, refSchema);
         assertEquals(schema.getProperties().size(), 1);
         final Schema field = schema.getProperties().get("type");
         assertEquals(Schema.SchemaType.STRING, field.getType());
@@ -127,6 +132,22 @@ public class SchemaProcessorTest {
         assertEquals(Schema.SchemaType.INTEGER, schema.getProperties().get("id").getType());
         assertEquals(Schema.SchemaType.STRING, schema.getProperties().get("date").getType());
         assertEquals(Schema.SchemaType.ARRAY, schema.getProperties().get("relationship").getType());
+    }
+
+    @Test
+    public void refSameSchema() {
+        final Components components = new ComponentsImpl();
+        Schema refSchema = new SchemaProcessor().mapSchemaFromClass(() -> components, SomeClassWithTwoIdenticalObjects.class);
+        //verify that return schema has ref to the actual schema in the components
+        assertEquals("#/components/schemas/org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClassWithTwoIdenticalObjects", refSchema.getRef());
+
+        final Schema schema = getReferredSchema(components, refSchema);
+        assertEquals(schema.getProperties().size(), 2);
+        final Schema type = schema.getProperties().get("type");
+        final Schema anotherType = schema.getProperties().get("anotherType");
+        //verify that both properties are referring to the same schema
+        assertEquals("#/components/schemas/org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeTypeField", type.getRef());
+        assertEquals("#/components/schemas/org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeTypeField", anotherType.getRef());
     }
 
     private Supplier<Components> newComponentsProvider() {
@@ -166,6 +187,11 @@ public class SchemaProcessorTest {
 
     public static class SomeTypeField {
         protected Type type;
+    }
+
+    public static class SomeClassWithTwoIdenticalObjects{
+        protected SomeTypeField type;
+        protected SomeTypeField anotherType;
     }
 
     public static class SomeClassField {

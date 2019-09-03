@@ -23,7 +23,6 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -100,7 +99,7 @@ public class SchemaProcessor {
             final Supplier<org.eclipse.microprofile.openapi.models.Components>components,
             final Type rawModel,
             final org.eclipse.microprofile.openapi.models.media.Schema schema,
-            String providedRef) {
+            final String providedRef) {
         final Type model = unwrapType(rawModel);
         if (Class.class.isInstance(model)) {
             if (boolean.class == model) {
@@ -146,22 +145,21 @@ public class SchemaProcessor {
                     fillSchema(components, Object.class, items, null);
                     schema.items(items);
                 } else {
-                    Optional<Annotation> annotation = ofNullable(from.getAnnotation(Schema.class));
+                    Optional<Schema> annotation = ofNullable((Schema) from.getAnnotation(Schema.class));
+                    String ref = providedRef;
                     if (annotation.isPresent()) {
                         //if providedRef is null and the Schema name is not Empty, we set it as providedRef
-                        Schema schemaAnnotation = Schema.class.cast(annotation.get());
-                        String ref = schemaAnnotation.name().isEmpty() ? null : schemaAnnotation.name();
-                        if (providedRef == null) {
-                            providedRef = ref;
+                        if (ref == null && !annotation.get().name().isEmpty() ) {
+                            ref = annotation.get().name().isEmpty() ? null : annotation.get().name();
                         }
-                        sets(components, schemaAnnotation, schema, ref);
+                        sets(components, annotation.get(), schema, ref);
                     }
 
                     schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT);
 
-                    final org.eclipse.microprofile.openapi.models.media.Schema objectSchema = getOrCreateReusableObjectComponent(components, from, providedRef);
+                    final org.eclipse.microprofile.openapi.models.media.Schema objectSchema = getOrCreateReusableObjectComponent(components, from, ref);
                     if (schema != objectSchema) {
-                        schema.ref(toRef(from, providedRef));
+                        schema.ref(toRef(from, ref));
                     }
                 }
             }
