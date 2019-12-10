@@ -46,7 +46,7 @@ public class SerializationTest {
         try (final Jsonb jsonb = JsonbBuilder.create()) {
             assertEquals("{\"default\":{\"description\":\"test\"},\"200\":{\"description\":\"ok\"}}", jsonb.toJson(responses));
         }
-        assertEquals("---\ndefault:\n  description: \"test\"\n200:\n  description: \"ok\"\n", Yaml.getObjectMapper().writeValueAsString(responses));
+        assertEquals("---\ndefault:\n  description: \"test\"\n\"200\":\n  description: \"ok\"\n", Yaml.getObjectMapper().writeValueAsString(responses));
     }
 
     @Test
