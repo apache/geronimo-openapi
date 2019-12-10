@@ -29,14 +29,38 @@
   <version>1.0.12-SNAPSHOT</version>
   <name>Geronimo OpenAPI</name>
   <packaging>pom</packaging>
+
   <description>
     Apache Geronimo implementation of the Microprofile OpenAPI Specification
   </description>
 
-  <modules>
-    <module>geronimo-openapi-maven-plugin</module>
-    <module>geronimo-openapi-impl</module>
-  </modules>
+  <organization>
+    <name>The Apache Software Foundation</name>
+    <url>http://www.apache.org/</url>
+  </organization>
+
+  <inceptionYear>2018</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Apache Geronimo Community</name>
+      <url>https://geronimo.apache.org</url>
+      <organization>Apache</organization>
+    </developer>
+  </developers>
+
+  <issueManagement>
+    <system>ASF JIRA</system>
+    <url>https://issues.apache.org/jira/browse/GERONIMO</url>
+  </issueManagement>
 
   <scm>
     <connection>scm:git:https://gitbox.apache.org/repos/asf/geronimo-openapi.git</connection>
@@ -52,6 +76,11 @@
     <jackson.version>2.10.0</jackson.version>
     <johnzon.version>1.2.1</johnzon.version>
   </properties>
+
+  <modules>
+    <module>geronimo-openapi-maven-plugin</module>
+    <module>geronimo-openapi-impl</module>
+  </modules>
 
   <dependencyManagement>
     <dependencies>
@@ -265,6 +294,19 @@
 
   <build>
     <plugins>
+
+      <!-- we need to tweak the maven-release-plugin for GIT -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <configuration>
+          <pushChanges>false</pushChanges>
+          <localCheckout>true</localCheckout>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+          <preparationGoals>clean install</preparationGoals>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -277,31 +319,4 @@
     </plugins>
   </build>
 
-  <organization>
-    <name>The Apache Software Foundation</name>
-    <url>http://www.apache.org/</url>
-  </organization>
-
-  <inceptionYear>2018</inceptionYear>
-
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-
-  <developers>
-    <developer>
-      <name>Apache Geronimo Community</name>
-      <url>https://geronimo.apache.org</url>
-      <organization>Apache</organization>
-    </developer>
-  </developers>
-
-  <issueManagement>
-    <system>ASF JIRA</system>
-    <url>https://issues.apache.org/jira/browse/GERONIMO</url>
-  </issueManagement>
 </project>
