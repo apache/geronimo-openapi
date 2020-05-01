@@ -74,7 +74,7 @@
     <arquillian.version>1.1.14.Final</arquillian.version>
     <testng.version>6.9.9</testng.version>
     <jackson.version>2.10.0</jackson.version>
-    <johnzon.version>1.2.1</johnzon.version>
+    <johnzon.version>1.2.4</johnzon.version>
   </properties>
 
   <modules>
