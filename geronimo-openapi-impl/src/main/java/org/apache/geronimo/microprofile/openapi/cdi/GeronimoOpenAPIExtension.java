@@ -120,7 +120,7 @@ public class GeronimoOpenAPIExtension implements Extension {
         }
     }
 
-    <T> void findEndpointsAndApplication(@Observes final ProcessBean<T> event) {
+    protected <T> void findEndpointsAndApplication(@Observes final ProcessBean<T> event) {
         final String typeName = event.getAnnotated().getBaseType().getTypeName();
         if (classes == null && !skipScan && event.getAnnotated().isAnnotationPresent(Path.class) &&
                 !typeName.startsWith("org.apache.geronimo.microprofile.openapi.") &&
