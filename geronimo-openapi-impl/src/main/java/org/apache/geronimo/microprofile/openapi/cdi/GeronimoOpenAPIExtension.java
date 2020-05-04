@@ -61,6 +61,7 @@ import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.OASFilter;
 import org.eclipse.microprofile.openapi.OASModelReader;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 public class GeronimoOpenAPIExtension implements Extension {
 
@@ -123,6 +124,7 @@ public class GeronimoOpenAPIExtension implements Extension {
     <T> void findEndpointsAndApplication(@Observes final ProcessBean<T> event) {
         final String typeName = event.getAnnotated().getBaseType().getTypeName();
         if (classes == null && !skipScan && event.getAnnotated().isAnnotationPresent(Path.class) &&
+                !event.getAnnotated().isAnnotationPresent(RegisterRestClient.class) &&
                 !typeName.startsWith("org.apache.geronimo.microprofile.openapi.") &&
                 (packages == null || packages.stream().anyMatch(typeName::startsWith))) {
             endpoints.add(event.getBean());
