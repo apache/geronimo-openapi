@@ -171,7 +171,7 @@ public class GeronimoOpenAPIExtension implements Extension {
 
         // adds the context path to the base
         final Instance<ServletContext> servletContextInstance = current.select(ServletContext.class);
-        final boolean appendContextPath = Boolean.valueOf(config.read("application.append-context-path", "true"));
+        final boolean appendContextPath = Boolean.parseBoolean(config.read("application.append-context-path", "true"));
         String contextPath = "";
         if (appendContextPath && !servletContextInstance.isAmbiguous() && !servletContextInstance.isUnsatisfied()) {
             contextPath = servletContextInstance.get().getContextPath();

@@ -287,7 +287,7 @@ public class SchemaProcessor {
             final org.eclipse.microprofile.openapi.models.media.Schema schemaFromClass = mapSchemaFromClass(
                     components, type);
             if (annotation != null) {
-                mergeSchema(components, schemaFromClass, annotation);
+                mergeSchema(components, schemaFromClass, annotation, type);
             }
             return schemaFromClass;
         });
@@ -349,7 +349,7 @@ public class SchemaProcessor {
 
     private void mergeSchema(final Supplier<Components> components,
                              final org.eclipse.microprofile.openapi.models.media.Schema impl,
-                             final Schema schema) {
+                             final Schema schema, final Type type) {
         if (schema.deprecated()) {
             impl.deprecated(schema.deprecated());
         }
@@ -368,8 +368,25 @@ public class SchemaProcessor {
         if (!schema.ref().isEmpty()) {
             impl.ref(schema.ref());
         }
-        if (!schema.example().isEmpty()) {
-            impl.example(schema.example());
+        final String example = schema.example();
+        if (!example.isEmpty()) {
+            if (type != null) {
+                if (type == double.class || type == Double.class ||
+                        type == float.class || type == Float.class) {
+                    impl.example(Double.parseDouble(example));
+                } else if (type == long.class || type == Long.class ||
+                        type == int.class || type == Integer.class ||
+                        type == short.class || type == Short.class ||
+                        type == byte.class || type == Byte.class) {
+                    impl.example(Integer.parseInt(example));
+                } else if (type == boolean.class || type == Boolean.class) {
+                    impl.example(Boolean.parseBoolean(example));
+                } else {
+                    impl.example(example);
+                }
+            } else {
+                impl.example(example);
+            }
         }
         of(schema.not()).filter(it -> it != Void.class).ifPresent(t -> impl.not(mapSchemaFromClass(components, t)));
         final List<org.eclipse.microprofile.openapi.models.media.Schema> oneOf = Stream.of(schema.oneOf())
@@ -478,7 +495,7 @@ public class SchemaProcessor {
                     fillSchema(components, schema.implementation(), impl, providedRef);
                 }
             }
-            mergeSchema(components, impl, schema);
+            mergeSchema(components, impl, schema, null);
         }
     }
 

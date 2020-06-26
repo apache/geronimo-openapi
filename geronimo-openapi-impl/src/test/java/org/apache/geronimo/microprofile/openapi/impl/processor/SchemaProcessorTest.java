@@ -16,27 +16,49 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
-import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toSet;
-import static org.testng.Assert.assertEquals;
-
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
-import javax.json.bind.annotation.JsonbProperty;
-
 import org.apache.geronimo.microprofile.openapi.impl.model.ComponentsImpl;
 import org.apache.geronimo.microprofile.openapi.openjpa.Entity1;
 import org.eclipse.microprofile.openapi.models.Components;
 import org.eclipse.microprofile.openapi.models.media.Schema;
 import org.testng.annotations.Test;
 
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+import javax.json.bind.annotation.JsonbProperty;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
+import static org.testng.Assert.assertEquals;
+
 public class SchemaProcessorTest {
+    @Test
+    public void primitiveExample() {
+        final Supplier<Components> components = newComponentsProvider();
+        final Schema tmp = new SchemaProcessor().mapSchemaFromClass(components, WithPrimitives.class);
+        final Schema schema = components.get().getSchemas().get(tmp.getRef().substring("#/components/schemas/".length()));
+        assertEquals(Schema.SchemaType.OBJECT, schema.getType());
+        assertEquals("" +
+                        "d=1.5 (java.lang.Double)\n" +
+                        "data={\"name\":\"ok\"} (java.lang.String)\n" +
+                        "i=1 (java.lang.Integer)\n" +
+                        "l=2 (java.lang.Integer)\n" +
+                        "str=ok (java.lang.String)\n" +
+                        "yes=true (java.lang.Boolean)",
+                schema.getProperties().entrySet().stream()
+                        .map(i -> {
+                            final Object example = i.getValue().getExample();
+                            return i.getKey() + "=" + example + " (" + example.getClass().getName() + ")";
+                        })
+                        .sorted()
+                        .collect(joining("\n")));
+    }
+
     @Test
     public void mapJsonp() {
         Stream.of(JsonValue.class, JsonObject.class).forEach(it -> {
@@ -86,7 +108,7 @@ public class SchemaProcessorTest {
         assertSomeRelatedClass(children.getItems());
         assertEquals(2, components.getSchemas().size());
         final Schema completeSchema =
-            components.getSchemas().get("org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass");
+                components.getSchemas().get("org_apache_geronimo_microprofile_openapi_impl_processor_SchemaProcessorTest_SomeClass");
         assertEquals(3, completeSchema.getProperties().size());
         assertEquals(Stream.of("simple", "child", "children").collect(toSet()), completeSchema.getProperties().keySet());
     }
@@ -189,7 +211,7 @@ public class SchemaProcessorTest {
         protected Type type;
     }
 
-    public static class SomeClassWithTwoIdenticalObjects{
+    public static class SomeClassWithTwoIdenticalObjects {
         protected SomeTypeField type;
         protected SomeTypeField anotherType;
     }
@@ -224,5 +246,25 @@ public class SchemaProcessorTest {
     public static class JsonbData {
         @JsonbProperty("foo")
         protected String name;
+    }
+
+    public static class WithPrimitives {
+        @org.eclipse.microprofile.openapi.annotations.media.Schema(example = "{\"name\":\"ok\"}")
+        protected Data data;
+
+        @org.eclipse.microprofile.openapi.annotations.media.Schema(example = "ok")
+        protected String str;
+
+        @org.eclipse.microprofile.openapi.annotations.media.Schema(example = "1")
+        protected int i;
+
+        @org.eclipse.microprofile.openapi.annotations.media.Schema(example = "2")
+        protected long l;
+
+        @org.eclipse.microprofile.openapi.annotations.media.Schema(example = "1.5")
+        protected double d;
+
+        @org.eclipse.microprofile.openapi.annotations.media.Schema(example = "true")
+        protected boolean yes;
     }
 }
