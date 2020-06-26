@@ -18,11 +18,13 @@ package org.apache.geronimo.microprofile.openapi.impl.processor;
 
 import static java.beans.Introspector.decapitalize;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.io.StringReader;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -42,9 +44,12 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonReaderFactory;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 import javax.json.bind.annotation.JsonbProperty;
@@ -61,6 +66,7 @@ public class SchemaProcessor {
     private final Map<Type, org.eclipse.microprofile.openapi.models.media.Schema> cache = new HashMap<>();
     private final Map<Class<?>, String> providedRefs = new HashMap<>();
     private final Class<?> persistenceCapable;
+    private final JsonReaderFactory jsonReaderFactory;
 
     public SchemaProcessor() {
         Class<?> pc = null;
@@ -70,6 +76,7 @@ public class SchemaProcessor {
         } catch (final NoClassDefFoundError | ClassNotFoundException e) {
             // no-op
         }
+        jsonReaderFactory = Json.createReaderFactory(emptyMap());
         persistenceCapable = pc;
     }
 
@@ -381,6 +388,15 @@ public class SchemaProcessor {
                     impl.example(Integer.parseInt(example));
                 } else if (type == boolean.class || type == Boolean.class) {
                     impl.example(Boolean.parseBoolean(example));
+                } else if (type == String.class) {
+                    impl.example(example);
+                } else if ((example.startsWith("{") && example.endsWith("}")) ||
+                        (example.startsWith("[") && example.endsWith("}"))) {
+                    try (final JsonReader reader = jsonReaderFactory.createReader(new StringReader(example))) {
+                        impl.example(reader.readValue());
+                    } catch (final Exception e) {
+                        impl.example(example);
+                    }
                 } else {
                     impl.example(example);
                 }

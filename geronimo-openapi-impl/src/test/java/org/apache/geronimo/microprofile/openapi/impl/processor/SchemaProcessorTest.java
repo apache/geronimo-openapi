@@ -45,7 +45,7 @@ public class SchemaProcessorTest {
         assertEquals(Schema.SchemaType.OBJECT, schema.getType());
         assertEquals("" +
                         "d=1.5 (java.lang.Double)\n" +
-                        "data={\"name\":\"ok\"} (java.lang.String)\n" +
+                        "data={\"name\":\"ok\"} (org.apache.johnzon.core.JsonObjectImpl)\n" +
                         "i=1 (java.lang.Integer)\n" +
                         "l=2 (java.lang.Integer)\n" +
                         "str=ok (java.lang.String)\n" +
