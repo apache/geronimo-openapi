@@ -28,6 +28,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -61,6 +64,9 @@ public class OpenAPIMojo extends AbstractMojo {
 
     @Parameter(property = "geronimo-openapi.output", defaultValue = "${project.build.outputDirectory}/META-INF/classes/openapi.json")
     protected File output;
+
+    @Parameter(property = "geronimo-openapi.encoding", defaultValue = "UTF-8")
+    protected String encoding;
 
     @Parameter
     protected String application;
@@ -158,7 +164,8 @@ public class OpenAPIMojo extends AbstractMojo {
 
         output.getParentFile().mkdirs();
         try (final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(prettify));
-             final Writer writer = new FileWriter(output)) {
+             final Writer writer = Files.newBufferedWriter(
+                     output.toPath(), encoding == null ? StandardCharsets.UTF_8 : Charset.forName(encoding))) {
             jsonb.toJson(api, writer);
         } catch (final Exception e) {
             throw new MojoExecutionException(e.getMessage(), e);
