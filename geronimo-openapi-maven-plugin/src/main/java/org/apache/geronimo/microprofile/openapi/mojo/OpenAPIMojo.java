@@ -16,31 +16,6 @@
  */
 package org.apache.geronimo.microprofile.openapi.mojo;
 
-import static java.util.Optional.ofNullable;
-import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSES;
-import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
-import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Stream;
-
-import javax.json.bind.Jsonb;
-import javax.json.bind.JsonbBuilder;
-import javax.json.bind.JsonbConfig;
-
 import org.apache.geronimo.microprofile.openapi.impl.model.InfoImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.OpenAPIImpl;
 import org.apache.geronimo.microprofile.openapi.impl.processor.AnnotationProcessor;
@@ -53,6 +28,36 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.apache.xbean.finder.AnnotationFinder;
+import org.apache.xbean.finder.archive.FileArchive;
+
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
+import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.Path;
+import java.io.File;
+import java.io.IOException;
+import java.io.Writer;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
+
+import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
+import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSES;
+import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
 @Mojo(name = "openapi.json", defaultPhase = PROCESS_CLASSES, requiresDependencyResolution = COMPILE_PLUS_RUNTIME, threadSafe = true)
 public class OpenAPIMojo extends AbstractMojo {
@@ -102,9 +107,9 @@ public class OpenAPIMojo extends AbstractMojo {
         try {
             try (final URLClassLoader loader = new URLClassLoader(
                     Stream.concat(
-                                Stream.of(classes),
-                                ofNullable(project)
-                                        .map(p -> p.getArtifacts().stream().map(Artifact::getFile)).orElseGet(Stream::empty))
+                            Stream.of(classes),
+                            ofNullable(project)
+                                    .map(p -> p.getArtifacts().stream().map(Artifact::getFile)).orElseGet(Stream::empty))
                             .filter(Objects::nonNull)
                             .map(file -> {
                                 try {
@@ -125,6 +130,11 @@ public class OpenAPIMojo extends AbstractMojo {
                     super.close();
                 }
             }) {
+                if ((application == null || hasNoEndpoint()) &&
+                        classes != null && classes.exists()) {
+                    scan(loader);
+                }
+
                 final AnnotationProcessor processor = new AnnotationProcessor(
                         (value, def) -> ofNullable(configuration).orElseGet(Collections::emptyMap).getOrDefault(value, def),
                         loadNamingStrategy(), null);
@@ -133,12 +143,12 @@ public class OpenAPIMojo extends AbstractMojo {
                     getLog().info("Processed application " + application);
                 }
                 if (endpointClasses != null) {
-                    final String binding = application == null ? "" : processor.getApplicationBinding(load(application));
+                    final String binding = hasNoApplication() ? "" : processor.getApplicationBinding(load(application));
                     endpointClasses.stream().map(this::load)
                             .peek(c -> getLog().info("Processing class " + c.getName()))
                             .forEach(c -> processor.processClass(
-                                binding, api, new ClassElement(c),
-                                Stream.of(c.getMethods()).map(MethodElement::new)));
+                                    binding, api, new ClassElement(c),
+                                    Stream.of(c.getMethods()).map(MethodElement::new)));
                 } else {
                     getLog().warn("No <endpointClasses> registered, your OpenAPI will be empty.");
                 }
@@ -173,6 +183,29 @@ public class OpenAPIMojo extends AbstractMojo {
         getLog().info("Wrote " + output);
     }
 
+    private boolean hasNoApplication() {
+        return application == null || "none".equals(application);
+    }
+
+    private boolean hasNoEndpoint() {
+        return endpointClasses == null || endpointClasses.isEmpty();
+    }
+
+    private void scan(final ClassLoader loader) {
+        final Finder finder = new Finder(loader, classes);
+        if (application == null) {
+            final List<String> apps = finder.findByAnnotation(ApplicationPath.class.getName());
+            if (apps.size() > 1) {
+                throw new IllegalArgumentException("Ambiguous application class: " + apps);
+            } else if (apps.size() == 1) {
+                application = apps.iterator().next();
+            }
+        }
+        if (endpointClasses == null || endpointClasses.isEmpty()) {
+            endpointClasses = finder.findByAnnotation(Path.class.getName());
+        }
+    }
+
     private NamingStrategy loadNamingStrategy() {
         return ofNullable(operationNamingStrategy)
                 .map(String::trim)
@@ -198,4 +231,28 @@ public class OpenAPIMojo extends AbstractMojo {
         }
     }
 
+    private static class Finder extends AnnotationFinder {
+        private Finder(final ClassLoader loader, final File classes) {
+            super(new FileArchive(loader, classes), false);
+        }
+
+        // don't require the runtime to be loadable by the plugin
+        private List<String> findByAnnotation(final String annotationName) {
+            return super.getAnnotationInfos(annotationName).stream()
+                    .filter(ClassInfo.class::isInstance)
+                    .map(ClassInfo.class::cast)
+                    .filter(it -> {
+                        try {
+                            final Class<?> type = it.get();
+                            return type.isInterface() || !Modifier.isAbstract(type.getModifiers());
+                        } catch (final Exception e) {
+                            return true;
+                        }
+                    })
+                    .map(ClassInfo::getName)
+                    .distinct()
+                    .sorted()
+                    .collect(toList());
+        }
+    }
 }

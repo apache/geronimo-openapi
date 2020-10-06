@@ -16,6 +16,7 @@
  */
 package org.apache.geronimo.microprofile.openapi.mojo;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -43,21 +44,34 @@ import org.junit.Test;
 
 public class OpenAPIMojoTest {
     @Test
+    public void scan() throws Exception {
+        final OpenAPIMojo mojo = new OpenAPIMojo();
+        mojo.output = new File("target/OpenAPIMojoTest_scan_1.json");
+        mojo.classes = new File("target/test-classes");
+        mojo.endpointClasses = emptyList();
+        doExecuteAndAssert(mojo);
+    }
+
+    @Test
     public void run() throws Exception {
         final OpenAPIMojo mojo = new OpenAPIMojo();
         mojo.output = new File("target/OpenAPIMojoTest_run_1.json");
         mojo.endpointClasses = singleton(HelloServiceImpl1.class.getName());
+        doExecuteAndAssert(mojo);
+    }
+
+    private void doExecuteAndAssert(final OpenAPIMojo mojo) throws Exception {
         mojo.project = new MavenProject();
         mojo.project.setVersion("1.2.3");
         mojo.execute();
         final OpenAPI openAPI = readOpenAPI(mojo.output);
         assertNotNull(openAPI.getInfo());
         assertEquals("1.2.3", openAPI.getInfo().getVersion());
-        final Operation get = openAPI.getPaths().get("/sayHello/{a}").getGET();
+        final Operation get = openAPI.getPaths().getPathItem("/sayHello/{a}").getGET();
         assertNotNull(get);
         assertEquals(1, get.getParameters().size());
         assertEquals("a", get.getParameters().iterator().next().getName());
-        assertEquals(Schema.SchemaType.STRING, get.getResponses().get("200").getContent().get("text/plain").getSchema().getType());
+        assertEquals(Schema.SchemaType.STRING, get.getResponses().getAPIResponse("200").getContent().getMediaType("text/plain").getSchema().getType());
     }
 
     private OpenAPI readOpenAPI(final File output) throws Exception {
