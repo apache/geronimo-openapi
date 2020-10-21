@@ -50,6 +50,7 @@ import javax.json.JsonReader;
 import javax.json.JsonReaderFactory;
 import javax.json.JsonValue;
 import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.BeanParam;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -96,6 +97,8 @@ import org.apache.geronimo.microprofile.openapi.impl.model.ServerImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariableImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariablesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.TagImpl;
+import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.ClassElement;
+import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.FieldElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.eclipse.microprofile.openapi.OASConfig;
 import org.eclipse.microprofile.openapi.annotations.Components;
@@ -385,9 +388,9 @@ public class AnnotationProcessor {
         });
         operation.parameters(Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameter.class) || hasJaxRsParams(it))
-                .map(it -> buildParameter(it, api)
-                        .orElseGet(() -> new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(
-                                () -> getOrCreateComponents(api), it.getType()))))
+                .flatMap(it -> buildParameter(it, api)
+                        .orElseGet(() -> Stream.of(new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(
+                                () -> getOrCreateComponents(api), it.getType())))))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameters.class))
@@ -507,40 +510,71 @@ public class AnnotationProcessor {
 
     private boolean hasJaxRsParams(final AnnotatedElement it) {
         return it.isAnnotationPresent(HeaderParam.class) || it.isAnnotationPresent(CookieParam.class) ||
-                it.isAnnotationPresent(PathParam.class) || it.isAnnotationPresent(QueryParam.class);
+                it.isAnnotationPresent(PathParam.class) || it.isAnnotationPresent(QueryParam.class) ||
+                it.isAnnotationPresent(BeanParam.class);
     }
 
-    private Optional<org.eclipse.microprofile.openapi.models.parameters.Parameter> buildParameter(
+    private Optional<Stream<org.eclipse.microprofile.openapi.models.parameters.Parameter>> buildParameter(
             final AnnotatedTypeElement annotatedElement, final OpenAPI openAPI) {
         return ofNullable(ofNullable(annotatedElement.getAnnotation(Parameter.class))
                 .map(it -> mapParameter(annotatedElement, () -> getOrCreateComponents(openAPI), it))
+                .map(Stream::of)
                 .orElseGet(() -> {
                     if (hasJaxRsParams(annotatedElement)) {
-                        final ParameterImpl parameter = new ParameterImpl();
-                        if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
-                            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER)
-                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
-                                    .name(annotatedElement.getAnnotation(HeaderParam.class).value());
-                        } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
-                            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE)
-                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
-                                    .name(annotatedElement.getAnnotation(CookieParam.class).value());
-                        } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
-                            parameter.required(true)
-                                    .in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH)
-                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
-                                    .name(annotatedElement.getAnnotation(PathParam.class).value());
-                        } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
-                            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
-                                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
-                                    .name(annotatedElement.getAnnotation(QueryParam.class).value());
+                        if (annotatedElement.isAnnotationPresent(BeanParam.class)) {
+                            return fromBeanParam(annotatedElement, openAPI);
                         }
-                        parameter.schema(schemaProcessor.mapSchemaFromClass(
-                                    () -> getOrCreateComponents(openAPI), annotatedElement.getType()));
-                        return parameter;
+                        return Stream.of(bindParam(annotatedElement, openAPI));
                     }
-                    return null;
+                    return Stream.empty();
                 }));
+    }
+
+    private Stream<org.eclipse.microprofile.openapi.models.parameters.Parameter> fromBeanParam(
+            final AnnotatedTypeElement elt, final OpenAPI openAPI) {
+        final Type type = elt.getType();
+        if (type != null && type != Object.class) {
+            final Class<?> clazz = Class.class.cast(type);
+            return Stream.concat(fromBeanParamForType(clazz, openAPI), fromBeanParamForType(clazz.getSuperclass(), openAPI));
+        }
+        return null;
+    }
+
+    private Stream<org.eclipse.microprofile.openapi.models.parameters.Parameter> fromBeanParamForType(
+            final Class<?> type, final OpenAPI openAPI) {
+        if (type == null || type == Object.class) {
+            return Stream.empty();
+        }
+        return Stream.of(type.getDeclaredFields())
+                .filter(this::hasJaxRsParams)
+                .map(FieldElement::new)
+                .map(it -> bindParam(it, openAPI));
+    }
+
+    private ParameterImpl bindParam(final AnnotatedTypeElement annotatedElement,
+                                    final OpenAPI openAPI) {
+        final ParameterImpl parameter = new ParameterImpl();
+        if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
+            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER)
+                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
+                    .name(annotatedElement.getAnnotation(HeaderParam.class).value());
+        } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
+            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE)
+                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
+                    .name(annotatedElement.getAnnotation(CookieParam.class).value());
+        } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
+            parameter.required(true)
+                    .in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH)
+                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
+                    .name(annotatedElement.getAnnotation(PathParam.class).value());
+        } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
+            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
+                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
+                    .name(annotatedElement.getAnnotation(QueryParam.class).value());
+        }
+        parameter.schema(schemaProcessor.mapSchemaFromClass(
+                    () -> getOrCreateComponents(openAPI), annotatedElement.getType()));
+        return parameter;
     }
 
     private PathItem getPathItem(final OpenAPI api, final String path) {

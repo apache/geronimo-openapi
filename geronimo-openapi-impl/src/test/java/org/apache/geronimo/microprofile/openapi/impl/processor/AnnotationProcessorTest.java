@@ -23,14 +23,18 @@ import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.MethodEle
 import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.models.OpenAPI;
+import org.eclipse.microprofile.openapi.models.Operation;
 import org.eclipse.microprofile.openapi.models.PathItem;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter;
 import org.eclipse.microprofile.openapi.models.responses.APIResponses;
 import org.testng.annotations.Test;
 
 import javax.json.JsonPatch;
+import javax.ws.rs.BeanParam;
+import javax.ws.rs.CookieParam;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PATCH;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -38,12 +42,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.joining;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
@@ -62,7 +66,7 @@ public class AnnotationProcessorTest {
         assertEquals("a", parameters.get(0).getName());
         // TODO add more assertions
     }
-    
+
     @Test
     public void ensureParameterAnnotationsAreMerged() {
         AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
@@ -75,7 +79,7 @@ public class AnnotationProcessorTest {
         assertEquals(Parameter.In.QUERY, parameters.get(0).getIn());
         assertEquals("b", parameters.get(0).getName());
     }
-    
+
     @Test
     public void ensureResponsesMediaTypeIsSetForDefaultResponses() {
         AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
@@ -91,7 +95,7 @@ public class AnnotationProcessorTest {
         assertNotNull(responses.get("204"));
         assertNotNull(responses.get("204").getContent().get("text/plain"));
     }
-    
+
     @Test
     public void ensureResponsesMediaTypeIsSetForAllResponses() {
         AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
@@ -107,7 +111,7 @@ public class AnnotationProcessorTest {
         assertNotNull(responses.get("204"));
         assertNotNull(responses.get("204").getContent().get("application/json"));
     }
-    
+
     @Test
     public void ensureResponsesDefaultMediaTypeIsSet() {
         AnnotationProcessor annotationProcessor = new AnnotationProcessor(GeronimoOpenAPIConfig.create(), new NamingStrategy.Default(), null);
@@ -159,6 +163,20 @@ public class AnnotationProcessorTest {
         assertNotNull(openAPI.getPaths().get("/{a}").getPATCH().getOperationId()); // we didn't get an index exception
     }
 
+    @Test
+    public void beanParam() {
+        final AnnotationProcessor annotationProcessor = new AnnotationProcessor((value, def) -> null, new NamingStrategy.Default(), null);
+        final OpenAPI openAPI = new OpenAPIImpl();
+        annotationProcessor.processClass("", openAPI, new ClassElement(Patched.class),
+                Stream.of(TestResource.class.getMethods()).map(MethodElement::new));
+        final Operation get = openAPI.getPaths().getPathItem("/beanparam").getGET();
+        assertNotNull(get);
+        assertEquals(2, get.getParameters().size());
+        assertEquals("header<=first(string),cookie<=second(string)", get.getParameters().stream()
+                .map(it -> it.getIn() + "<=" + it.getName() + "(" + it.getSchema().getType() + ")")
+                .collect(joining(",")));
+    }
+
     @Path("/")
     public class Patched {
 
@@ -190,19 +208,19 @@ public class AnnotationProcessorTest {
         public String hello(@PathParam("a") String a) {
             return "hello";
         }
-        
+
         @GET
         @Path("/bye")
         @Produces(MediaType.TEXT_PLAIN)
         public void bye(@org.eclipse.microprofile.openapi.annotations.parameters.Parameter(required = true) @QueryParam("b") String b) {
         }
-        
+
         @DELETE
         @Path("/bye")
         @APIResponse(responseCode = "204")
         public void bye() {
         }
-        
+
         @PATCH
         @Path("/bye")
         @Produces(MediaType.APPLICATION_JSON)
@@ -211,5 +229,19 @@ public class AnnotationProcessorTest {
         public Response bye(JsonPatch patch) {
             return Response.ok().build();
         }
+
+        @GET
+        @Path("/beanparam")
+        public Response beanParam(@BeanParam final Bound param) {
+            return Response.ok().build();
+        }
+    }
+
+    public static class Bound {
+        @HeaderParam("first")
+        private String premiere;
+
+        @CookieParam("second")
+        private String two;
     }
 }
