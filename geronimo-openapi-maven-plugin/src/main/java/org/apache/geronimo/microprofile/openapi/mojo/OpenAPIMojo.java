@@ -67,7 +67,7 @@ public class OpenAPIMojo extends AbstractMojo {
     @Parameter(property = "geronimo-openapi.prettify", defaultValue = "true")
     protected boolean prettify;
 
-    @Parameter(property = "geronimo-openapi.output", defaultValue = "${project.build.outputDirectory}/META-INF/classes/openapi.json")
+    @Parameter(property = "geronimo-openapi.output", defaultValue = "${project.build.outputDirectory}/META-INF/resources/openapi.json")
     protected File output;
 
     @Parameter(property = "geronimo-openapi.encoding", defaultValue = "UTF-8")

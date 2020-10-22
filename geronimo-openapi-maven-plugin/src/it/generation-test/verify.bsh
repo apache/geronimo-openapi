@@ -1,6 +1,6 @@
 import java.io.*;
 
-File generated = new File( basedir, "target/classes/META-INF/classes/openapi.json" );
+File generated = new File( basedir, "target/classes/META-INF/resources/openapi.json" );
 
 if ( !generated.isFile() )
 {
