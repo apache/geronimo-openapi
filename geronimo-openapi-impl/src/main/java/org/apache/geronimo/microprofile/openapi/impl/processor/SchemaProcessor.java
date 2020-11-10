@@ -16,14 +16,22 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
-import static java.beans.Introspector.decapitalize;
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import org.apache.geronimo.microprofile.openapi.impl.model.DiscriminatorImpl;
+import org.apache.geronimo.microprofile.openapi.impl.model.SchemaImpl;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.DiscriminatorMapping;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.models.Components;
 
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonNumber;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonReaderFactory;
+import javax.json.JsonString;
+import javax.json.JsonValue;
+import javax.json.bind.annotation.JsonbProperty;
 import java.io.StringReader;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
@@ -33,6 +41,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -44,40 +53,38 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonNumber;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonReaderFactory;
-import javax.json.JsonString;
-import javax.json.JsonValue;
-import javax.json.bind.annotation.JsonbProperty;
-import javax.ws.rs.core.Response;
-
-import org.apache.geronimo.microprofile.openapi.impl.model.DiscriminatorImpl;
-import org.apache.geronimo.microprofile.openapi.impl.model.SchemaImpl;
-import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
-import org.eclipse.microprofile.openapi.annotations.media.DiscriminatorMapping;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
-import org.eclipse.microprofile.openapi.models.Components;
+import static java.beans.Introspector.decapitalize;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class SchemaProcessor {
     private final Map<Type, org.eclipse.microprofile.openapi.models.media.Schema> cache = new HashMap<>();
     private final Map<Class<?>, String> providedRefs = new HashMap<>();
     private final Class<?> persistenceCapable;
+    private final Class<?> responseType;
     private final JsonReaderFactory jsonReaderFactory;
 
     public SchemaProcessor() {
+        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
         Class<?> pc = null;
         try {
-            pc = Thread.currentThread().getContextClassLoader()
-                    .loadClass("org.apache.openjpa.enhance.PersistenceCapable");
+            pc = loader.loadClass("org.apache.openjpa.enhance.PersistenceCapable");
+        } catch (final NoClassDefFoundError | ClassNotFoundException e) {
+            // no-op
+        }
+        Class<?> responseType = null;
+        try {
+            responseType = loader.loadClass("javax.ws.rs.core.Response");
         } catch (final NoClassDefFoundError | ClassNotFoundException e) {
             // no-op
         }
         jsonReaderFactory = Json.createReaderFactory(emptyMap());
         persistenceCapable = pc;
+        this.responseType = responseType;
     }
 
     public org.eclipse.microprofile.openapi.models.media.Schema mapSchemaFromClass(
@@ -123,10 +130,12 @@ public class SchemaProcessor {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.INTEGER);
             } else if (Integer.class == model || Short.class == model || Byte.class == model || Long.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.INTEGER).nullable(true);
-            } else if (Response.class == model || JsonObject.class == model || JsonValue.class == model) {
+            } else if (Object.class == model || responseType == model || JsonObject.class == model || JsonValue.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.OBJECT)
                         .nullable(true)
                         .properties(new HashMap<>());
+            } else if (BigDecimal.class == model || BigInteger.class == model) {
+                schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.STRING).nullable(true);
             } else if (JsonArray.class == model) {
                 schema.type(org.eclipse.microprofile.openapi.models.media.Schema.SchemaType.ARRAY)
                         .nullable(true)
