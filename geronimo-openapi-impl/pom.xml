@@ -33,7 +33,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.geronimo.specs</groupId>
-      <artifactId>geronimo-jaxrs_2.0_spec</artifactId>
+      <artifactId>geronimo-jaxrs_2.1_spec</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.geronimo.specs</groupId>
