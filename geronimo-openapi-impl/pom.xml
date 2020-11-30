@@ -159,6 +159,42 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.0.2</version>
+        <executions>
+          <execution>
+            <id>model</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>model</classifier>
+              <includes>
+                <include>org/apache/geronimo/microprofile/openapi/impl/model/**/*.class</include>
+              </includes>
+              <archive combine.children="append">
+                <manifestEntries>
+                  <Automatic-Module-Name>org.apache.geronimo.microprofile.openapi.model</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+          <execution>
+            <id>schema</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>schema</classifier>
+              <includes>
+                <include>org/apache/geronimo/microprofile/openapi/impl/processor/**/*.class</include>
+              </includes>
+              <archive combine.children="append">
+                <manifestEntries>
+                  <Automatic-Module-Name>org.apache.geronimo.microprofile.openapi.schema</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
         <configuration>
           <archive combine.children="append">
             <manifestEntries>
