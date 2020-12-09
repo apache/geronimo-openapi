@@ -172,9 +172,9 @@ public class AnnotationProcessorTest {
         final Operation get = openAPI.getPaths().getPathItem("/beanparam").getGET();
         assertNotNull(get);
         assertEquals(2, get.getParameters().size());
-        assertEquals("header<=first(string),cookie<=second(string)", get.getParameters().stream()
-                .map(it -> it.getIn() + "<=" + it.getName() + "(" + it.getSchema().getType() + ")")
-                .collect(joining(",")));
+        assertEquals(get.getParameters().stream()
+                .map(it -> it.getIn() + "<=" + it.getName() + "(" + it.getSchema().getType() + "):" + it.getDescription())
+                .collect(joining(",")), "header<=first(string):the one,cookie<=second(string):null");
     }
 
     @Path("/")
@@ -238,6 +238,7 @@ public class AnnotationProcessorTest {
     }
 
     public static class Bound {
+        @org.eclipse.microprofile.openapi.annotations.parameters.Parameter(description = "the one")
         @HeaderParam("first")
         private String premiere;
 

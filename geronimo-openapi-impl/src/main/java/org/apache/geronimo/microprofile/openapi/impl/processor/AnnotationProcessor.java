@@ -16,58 +16,6 @@
  */
 package org.apache.geronimo.microprofile.openapi.impl.processor;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
-import static java.util.Locale.ROOT;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-
-import java.io.StringReader;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import javax.enterprise.inject.Vetoed;
-import javax.json.Json;
-import javax.json.JsonNumber;
-import javax.json.JsonReader;
-import javax.json.JsonReaderFactory;
-import javax.json.JsonValue;
-import javax.ws.rs.ApplicationPath;
-import javax.ws.rs.BeanParam;
-import javax.ws.rs.CookieParam;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.container.Suspended;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
-
 import org.apache.geronimo.microprofile.openapi.config.GeronimoOpenAPIConfig;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponseImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.APIResponsesImpl;
@@ -97,7 +45,6 @@ import org.apache.geronimo.microprofile.openapi.impl.model.ServerImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariableImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.ServerVariablesImpl;
 import org.apache.geronimo.microprofile.openapi.impl.model.TagImpl;
-import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.ClassElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.reflect.FieldElement;
 import org.apache.geronimo.microprofile.openapi.impl.processor.spi.NamingStrategy;
 import org.eclipse.microprofile.openapi.OASConfig;
@@ -140,6 +87,57 @@ import org.eclipse.microprofile.openapi.models.media.Encoding;
 import org.eclipse.microprofile.openapi.models.media.MediaType;
 import org.eclipse.microprofile.openapi.models.responses.APIResponses;
 import org.eclipse.microprofile.openapi.models.security.Scopes;
+
+import javax.enterprise.inject.Vetoed;
+import javax.json.Json;
+import javax.json.JsonNumber;
+import javax.json.JsonReader;
+import javax.json.JsonReaderFactory;
+import javax.json.JsonValue;
+import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.BeanParam;
+import javax.ws.rs.CookieParam;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+import java.io.StringReader;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
+import static java.util.Locale.ROOT;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 @Vetoed
 public class AnnotationProcessor {
@@ -389,8 +387,12 @@ public class AnnotationProcessor {
         operation.parameters(Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameter.class) || hasJaxRsParams(it))
                 .flatMap(it -> buildParameter(it, api)
-                        .orElseGet(() -> Stream.of(new ParameterImpl().schema(schemaProcessor.mapSchemaFromClass(
-                                () -> getOrCreateComponents(api), it.getType())))))
+                        .orElseGet(() -> {
+                            final ParameterImpl parameter = new ParameterImpl();
+                            parameter.schema(schemaProcessor.mapSchemaFromClass(
+                                    () -> getOrCreateComponents(api), it.getType()));
+                            return Stream.of(parameter);
+                        }))
                 .filter(Objects::nonNull).collect(toList()));
         Stream.of(m.getParameters())
                 .filter(it -> it.isAnnotationPresent(Parameters.class))
@@ -514,7 +516,7 @@ public class AnnotationProcessor {
                 it.isAnnotationPresent(BeanParam.class);
     }
 
-    private Optional<Stream<org.eclipse.microprofile.openapi.models.parameters.Parameter>> buildParameter(
+    private Optional<Stream<ParameterImpl>> buildParameter(
             final AnnotatedTypeElement annotatedElement, final OpenAPI openAPI) {
         return ofNullable(ofNullable(annotatedElement.getAnnotation(Parameter.class))
                 .map(it -> mapParameter(annotatedElement, () -> getOrCreateComponents(openAPI), it))
@@ -530,7 +532,7 @@ public class AnnotationProcessor {
                 }));
     }
 
-    private Stream<org.eclipse.microprofile.openapi.models.parameters.Parameter> fromBeanParam(
+    private Stream<ParameterImpl> fromBeanParam(
             final AnnotatedTypeElement elt, final OpenAPI openAPI) {
         final Type type = elt.getType();
         if (type != null && type != Object.class) {
@@ -540,7 +542,7 @@ public class AnnotationProcessor {
         return null;
     }
 
-    private Stream<org.eclipse.microprofile.openapi.models.parameters.Parameter> fromBeanParamForType(
+    private Stream<ParameterImpl> fromBeanParamForType(
             final Class<?> type, final OpenAPI openAPI) {
         if (type == null || type == Object.class) {
             return Stream.empty();
@@ -553,27 +555,35 @@ public class AnnotationProcessor {
 
     private ParameterImpl bindParam(final AnnotatedTypeElement annotatedElement,
                                     final OpenAPI openAPI) {
-        final ParameterImpl parameter = new ParameterImpl();
-        if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
-            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER)
-                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
-                    .name(annotatedElement.getAnnotation(HeaderParam.class).value());
-        } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
-            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE)
-                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
-                    .name(annotatedElement.getAnnotation(CookieParam.class).value());
-        } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
-            parameter.required(true)
-                    .in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH)
-                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
-                    .name(annotatedElement.getAnnotation(PathParam.class).value());
-        } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
-            parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
-                    .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
-                    .name(annotatedElement.getAnnotation(QueryParam.class).value());
+        final ParameterImpl parameter;
+        final Parameter param = annotatedElement.getAnnotation(Parameter.class);
+        if (param != null) {
+            parameter = mapParameter(annotatedElement, () -> getOrCreateComponents(openAPI), param);
+        } else {
+            parameter = new ParameterImpl();
+            if (annotatedElement.isAnnotationPresent(HeaderParam.class)) {
+                parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.HEADER)
+                        .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
+                        .name(annotatedElement.getAnnotation(HeaderParam.class).value());
+            } else if (annotatedElement.isAnnotationPresent(CookieParam.class)) {
+                parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.COOKIE)
+                        .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
+                        .name(annotatedElement.getAnnotation(CookieParam.class).value());
+            } else if (annotatedElement.isAnnotationPresent(PathParam.class)) {
+                parameter.required(true)
+                        .in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.PATH)
+                        .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.SIMPLE)
+                        .name(annotatedElement.getAnnotation(PathParam.class).value());
+            } else if (annotatedElement.isAnnotationPresent(QueryParam.class)) {
+                parameter.in(org.eclipse.microprofile.openapi.models.parameters.Parameter.In.QUERY)
+                        .style(org.eclipse.microprofile.openapi.models.parameters.Parameter.Style.FORM)
+                        .name(annotatedElement.getAnnotation(QueryParam.class).value());
+            }
         }
-        parameter.schema(schemaProcessor.mapSchemaFromClass(
+        if (parameter.getSchema() == null) {
+            parameter.schema(schemaProcessor.mapSchemaFromClass(
                     () -> getOrCreateComponents(openAPI), annotatedElement.getType()));
+        }
         return parameter;
     }
 
@@ -946,7 +956,7 @@ public class AnnotationProcessor {
         return components;
     }
 
-    private org.eclipse.microprofile.openapi.models.parameters.Parameter mapParameter(
+    private ParameterImpl mapParameter(
             final AnnotatedTypeElement annotatedElement,
             final Supplier<org.eclipse.microprofile.openapi.models.Components> components,
             final Parameter parameter) {
