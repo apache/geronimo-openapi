@@ -73,7 +73,7 @@
     <spec.version>1.1.2</spec.version>
     <arquillian.version>1.1.14.Final</arquillian.version>
     <testng.version>6.9.9</testng.version>
-    <jackson.version>2.10.0</jackson.version>
+    <jackson.version>2.13.4.1</jackson.version>
     <johnzon.version>1.2.8</johnzon.version>
   </properties>
 
